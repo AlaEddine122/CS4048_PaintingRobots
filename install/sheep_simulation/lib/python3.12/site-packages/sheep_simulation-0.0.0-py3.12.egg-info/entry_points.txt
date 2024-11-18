@@ -1,0 +1,2 @@
+[console_scripts]
+sheep_node = sheep_simulation.sheep_node:main

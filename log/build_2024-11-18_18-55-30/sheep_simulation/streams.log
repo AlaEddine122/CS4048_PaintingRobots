@@ -1,0 +1,24 @@
+[1.533s] Invoking command in '/home/alaeddine/sheep_herding_ws/src/sheep_simulation': PYTHONPATH=/home/alaeddine/sheep_herding_ws/build/sheep_simulation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/sheep_simulation build --build-base /home/alaeddine/sheep_herding_ws/build/sheep_simulation/build install --record /home/alaeddine/sheep_herding_ws/build/sheep_simulation/install.log --single-version-externally-managed install_data
+[2.014s] running egg_info
+[2.046s] writing ../../build/sheep_simulation/sheep_simulation.egg-info/PKG-INFO
+[2.047s] writing dependency_links to ../../build/sheep_simulation/sheep_simulation.egg-info/dependency_links.txt
+[2.048s] writing entry points to ../../build/sheep_simulation/sheep_simulation.egg-info/entry_points.txt
+[2.048s] writing requirements to ../../build/sheep_simulation/sheep_simulation.egg-info/requires.txt
+[2.049s] writing top-level names to ../../build/sheep_simulation/sheep_simulation.egg-info/top_level.txt
+[2.128s] reading manifest file '../../build/sheep_simulation/sheep_simulation.egg-info/SOURCES.txt'
+[2.130s] writing manifest file '../../build/sheep_simulation/sheep_simulation.egg-info/SOURCES.txt'
+[2.131s] running build
+[2.131s] running build_py
+[2.131s] copying sheep_simulation/sheep_node.py -> /home/alaeddine/sheep_herding_ws/build/sheep_simulation/build/lib/sheep_simulation
+[2.132s] running install
+[2.144s] running install_lib
+[2.179s] copying /home/alaeddine/sheep_herding_ws/build/sheep_simulation/build/lib/sheep_simulation/sheep_node.py -> /home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation
+[2.181s] byte-compiling /home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation/sheep_node.py to sheep_node.cpython-312.pyc
+[2.184s] running install_data
+[2.185s] running install_egg_info
+[2.224s] removing '/home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation-0.0.0-py3.12.egg-info' (and everything under it)
+[2.226s] Copying ../../build/sheep_simulation/sheep_simulation.egg-info to /home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation-0.0.0-py3.12.egg-info
+[2.228s] running install_scripts
+[2.463s] Installing sheep_node script to /home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/sheep_simulation
+[2.464s] writing list of installed files to '/home/alaeddine/sheep_herding_ws/build/sheep_simulation/install.log'
+[2.536s] Invoked command in '/home/alaeddine/sheep_herding_ws/src/sheep_simulation' returned '0': PYTHONPATH=/home/alaeddine/sheep_herding_ws/build/sheep_simulation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/alaeddine/sheep_herding_ws/install/sheep_simulation/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../../build/sheep_simulation build --build-base /home/alaeddine/sheep_herding_ws/build/sheep_simulation/build install --record /home/alaeddine/sheep_herding_ws/build/sheep_simulation/install.log --single-version-externally-managed install_data
