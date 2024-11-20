@@ -1,0 +1,38 @@
+running egg_info
+creating ../../build/sheep_simulation/sheep_simulation.egg-info
+writing ../../build/sheep_simulation/sheep_simulation.egg-info/PKG-INFO
+writing dependency_links to ../../build/sheep_simulation/sheep_simulation.egg-info/dependency_links.txt
+writing entry points to ../../build/sheep_simulation/sheep_simulation.egg-info/entry_points.txt
+writing requirements to ../../build/sheep_simulation/sheep_simulation.egg-info/requires.txt
+writing top-level names to ../../build/sheep_simulation/sheep_simulation.egg-info/top_level.txt
+writing manifest file '../../build/sheep_simulation/sheep_simulation.egg-info/SOURCES.txt'
+reading manifest file '../../build/sheep_simulation/sheep_simulation.egg-info/SOURCES.txt'
+writing manifest file '../../build/sheep_simulation/sheep_simulation.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build
+creating /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib
+creating /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation
+copying sheep_simulation/sheep_node.py -> /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation
+copying sheep_simulation/__init__.py -> /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation
+copying sheep_simulation/wolf_node.py -> /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation
+running install
+running install_lib
+creating /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation
+copying /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation/sheep_node.py -> /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation
+copying /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation/__init__.py -> /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation
+copying /home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/build/lib/sheep_simulation/wolf_node.py -> /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation
+byte-compiling /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation/sheep_node.py to sheep_node.cpython-312.pyc
+byte-compiling /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation/wolf_node.py to wolf_node.cpython-312.pyc
+running install_data
+creating /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/share/ament_index
+creating /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/share/ament_index/resource_index
+creating /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/share/ament_index/resource_index/packages
+copying resource/sheep_simulation -> /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/share/ament_index/resource_index/packages
+copying package.xml -> /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/share/sheep_simulation
+running install_egg_info
+Copying ../../build/sheep_simulation/sheep_simulation.egg-info to /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/python3.12/site-packages/sheep_simulation-0.0.0-py3.12.egg-info
+running install_scripts
+Installing sheep_node script to /home/alaeddine/CS4048_SheepHerding/install/sheep_simulation/lib/sheep_simulation
+writing list of installed files to '/home/alaeddine/CS4048_SheepHerding/build/sheep_simulation/install.log'
