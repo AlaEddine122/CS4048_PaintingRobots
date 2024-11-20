@@ -6,7 +6,7 @@ import random
 class WolfSimulationNode(Node):
     def __init__(self):
         super().__init__('wolf_simulation_node')
-        #
+        ##
 
 def main(args=None):
     rclpy.init(args=args)
