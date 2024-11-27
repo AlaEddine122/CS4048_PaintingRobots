@@ -17,6 +17,7 @@ setup(
         'console_scripts': [
             'sheep_node = sheep_simulation.sheep_node:main',
             'wolf_node = sheep_simulation.wolf_node:main',
+            'master_node = sheep_simulation.master_node:main'
         ],
     },
 )
