@@ -79,6 +79,7 @@ class SheepSimulationNode(Node):
 
         # # Publish sheep's marker
         # self.publish_sheep_marker()
+        
         for sheep in self.sheep:
             # update position
             sheep["pose"] = self.random_walk(sheep["pose"])
