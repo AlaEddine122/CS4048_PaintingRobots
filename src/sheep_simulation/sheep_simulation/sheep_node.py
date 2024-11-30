@@ -39,7 +39,7 @@ class SheepSimulationNode(Node):
 
     def sheep_spawn_callback(self, request, response):
         try:
-            self.get_logger().info(f"Incoming request:")
+            self.get_logger().info(f"Incoming spawn request:")
             self.get_logger().info(f"name: {request.name}")
             self.get_logger().info(f"x: {request.x} y: {request.y}")
 
@@ -82,7 +82,7 @@ class SheepSimulationNode(Node):
         
         for sheep in self.sheep:
             # update position
-            sheep["pose"] = self.random_walk(sheep["pose"])
+            sheep["pose"] = self.update_sheep_position(sheep["pose"])
 
             # update marker
             sheep["marker"].pose.position.x = sheep["pose"]["x"]
@@ -91,26 +91,15 @@ class SheepSimulationNode(Node):
             # publish marker
             self.sheep_marker_publisher.publish(sheep["marker"])
 
-    def create_marker(self, sheep_name):
-        # Sheep marker (green sphere)
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.ns = sheep_name
-        marker.id = 0
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose.position.x = 0.0
-        marker.pose.position.y = 0.0
-        marker.pose.position.z = 0.0
-        marker.scale.x = 0.5
-        marker.scale.y = 0.5
-        marker.scale.z = 0.5
-        marker.color.a = 1.0  # Alpha (transparency)
-        marker.color.r = 0.0  # Green for sheep
-        marker.color.g = 1.0
-        marker.color.b = 0.0
+    def update_sheep_position(self, sheep_pose):
+        # random walk
+        sheep_pose = self.random_walk(sheep_pose)
 
-        return marker
+        # prevent sheep moving outside of grid
+        sheep_pose["x"] = max(-25.0, min(sheep_pose["x"], 25.0))
+        sheep_pose["y"] = max(-25.0, min(sheep_pose["y"], 25.0))
+
+        return sheep_pose
 
     def run_away(self):
         # Move sheep away from wolf
@@ -129,7 +118,7 @@ class SheepSimulationNode(Node):
         # self.sheep_position[1] += random.uniform(-0.5, 0.5)
         # self.get_logger().info(f"Sheep randomly moved to {self.sheep_position}")
         return {
-            "x" : pose["x"] + random.uniform(-0.5, 0.5),
+            "x" : pose["x"] + random.uniform(0, 2.5),
             "y" : pose["y"] + random.uniform(-0.5, 0.5),
             "theta" : pose["theta"]
         }
@@ -169,6 +158,27 @@ class SheepSimulationNode(Node):
         marker.color.b = 0.0
 
         self.sheep_marker_publisher.publish(marker)
+    
+    def create_marker(self, sheep_name):
+        # Sheep marker (green sphere)
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.ns = sheep_name
+        marker.id = 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        marker.pose.position.x = 0.0
+        marker.pose.position.y = 0.0
+        marker.pose.position.z = 0.0
+        marker.scale.x = 0.5
+        marker.scale.y = 0.5
+        marker.scale.z = 0.5
+        marker.color.a = 1.0  # Alpha (transparency)
+        marker.color.r = 0.0  # Green for sheep
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+
+        return marker
 
 def main(args=None):
     rclpy.init(args=args)
