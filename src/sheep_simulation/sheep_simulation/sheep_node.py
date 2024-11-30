@@ -1,15 +1,14 @@
 import rclpy
 from rclpy.node import Node
-from turtlesim.srv import Spawn
-from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point
+from sheep_simulation_interfaces.msg import EntityPose
+from sheep_simulation_interfaces.srv import EntitySpawn
 import random
 
 class SheepSimulationNode(Node):
     def __init__(self):
         super().__init__('sheep_simulation_node')
 
-        # Timer for sheep movement
+        # Timer for sheep logic
         self.timer = self.create_timer(0.5, self.update_simulation)
 
         # Initial positions
@@ -26,16 +25,14 @@ class SheepSimulationNode(Node):
         ]
 
         # Services
-        self.sheep_spawn_service = self.create_service(Spawn, "sheep_spawn", self.sheep_spawn_callback)
+        self.sheep_spawn_service = self.create_service(EntitySpawn, "sheep_spawn", self.sheep_spawn_callback)
 
         # Publishers and subscribers
-        self.sheep_position_publisher = self.create_publisher(Point, 'sheep_position', 10)
-        self.wolf_position_subscription = self.create_subscription(
-            Point, 'wolf_position', self.wolf_position_callback, 10
-        )
+        self.sheep_position_publisher = self.create_publisher(EntityPose, 'sheep_position', 10)
 
-        # Marker publisher
-        self.sheep_marker_publisher = self.create_publisher(Marker, 'visualization_marker_sheep', 10)
+        self.wolf_position_subscription = self.create_subscription(
+            EntityPose, 'wolf_position', self.wolf_position_callback, 10
+        )
 
     def sheep_spawn_callback(self, request, response):
         try:
@@ -50,14 +47,14 @@ class SheepSimulationNode(Node):
                     "y" : request.y,
                     "theta" : request.theta
                 },
-                "marker" : self.create_marker(request.name)
+                #"marker" : self.create_marker(request.name)
             }
             
-            response.name = "ok"
+            response.result = "ok"
 
             self.sheep.append(sheep_obj)
         except:
-            response.name = "fail"
+            response.result = "fail"
 
         return response
 
@@ -84,12 +81,15 @@ class SheepSimulationNode(Node):
             # update position
             sheep["pose"] = self.update_sheep_position(sheep["pose"])
 
+            # publish position
+            self.publish_sheep_position(sheep)
+
             # update marker
-            sheep["marker"].pose.position.x = sheep["pose"]["x"]
-            sheep["marker"].pose.position.y = sheep["pose"]["y"]
+            #sheep["marker"].pose.position.x = sheep["pose"]["x"]
+            #sheep["marker"].pose.position.y = sheep["pose"]["y"]
 
             # publish marker
-            self.sheep_marker_publisher.publish(sheep["marker"])
+            #self.sheep_marker_publisher.publish(sheep["marker"])
 
     def update_sheep_position(self, sheep_pose):
         # random walk
@@ -100,6 +100,15 @@ class SheepSimulationNode(Node):
         sheep_pose["y"] = max(-25.0, min(sheep_pose["y"], 25.0))
 
         return sheep_pose
+    
+    def publish_sheep_position(self, sheep):
+        position_msg = EntityPose()
+        position_msg.name = sheep["name"]
+        position_msg.x = sheep["pose"]["x"]
+        position_msg.y = sheep["pose"]["y"]
+        position_msg.theta = sheep["pose"]["theta"]
+
+        self.sheep_position_publisher.publish(position_msg)
 
     def run_away(self):
         # Move sheep away from wolf
@@ -123,62 +132,11 @@ class SheepSimulationNode(Node):
             "theta" : pose["theta"]
         }
 
-
     def wolf_position_callback(self, msg):
         # Update wolf's position when a message is received
         self.wolf_position = [msg.x, msg.y]
         self.get_logger().info(f"Received wolf position: {self.wolf_position}")
 
-    def publish_sheep_position(self):
-        # Publish the sheep's current position
-        position_msg = Point()
-        position_msg.x = self.sheep_position[0]
-        position_msg.y = self.sheep_position[1]
-        position_msg.z = 0.0
-        self.sheep_position_publisher.publish(position_msg)
-     
-    def publish_sheep_marker(self, sheep):
-        # Sheep marker (green sphere)
-        marker = Marker()
-        marker.header.frame_id = "map"
-        #marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "sheep"
-        marker.id = 0
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose.position.x = self.sheep_position[0]
-        marker.pose.position.y = self.sheep_position[1]
-        marker.pose.position.z = 0.0
-        marker.scale.x = 0.5
-        marker.scale.y = 0.5
-        marker.scale.z = 0.5
-        marker.color.a = 1.0  # Alpha (transparency)
-        marker.color.r = 0.0  # Green for sheep
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-
-        self.sheep_marker_publisher.publish(marker)
-    
-    def create_marker(self, sheep_name):
-        # Sheep marker (green sphere)
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.ns = sheep_name
-        marker.id = 0
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose.position.x = 0.0
-        marker.pose.position.y = 0.0
-        marker.pose.position.z = 0.0
-        marker.scale.x = 0.5
-        marker.scale.y = 0.5
-        marker.scale.z = 0.5
-        marker.color.a = 1.0  # Alpha (transparency)
-        marker.color.r = 0.0  # Green for sheep
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-
-        return marker
 
 def main(args=None):
     rclpy.init(args=args)
