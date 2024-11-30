@@ -1,81 +1,107 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Point
-from visualization_msgs.msg import Marker
-import math
+from sheep_simulation_interfaces.msg import EntityPose
+from sheep_simulation_interfaces.srv import EntitySpawn
+import random
 
-class WolfNode(Node):
+class WolfSimulationNode(Node):
     def __init__(self):
-        super().__init__('wolf_node')
+        super().__init__('wolf')
 
-        # Wolf state
-        self.wolf_position = [5.0, 5.0]
-        self.pen_position = [10.0, 10.0]
-        self.pen_radius = 1.0
+        # Timer for wolf logic
+        self.timer = self.create_timer(0.5, self.update_wolf)
 
-        # Subscribing to sheep's position
-        self.sheep_subscription = self.create_subscription(
-            Point, 'sheep_position', self.sheep_callback, 10)
+        # Initial positions
+        self.wolf_position = [0.0, 0.0]
+        self.wolf_position = None  # Initially unknown
 
-        # Publisher for wolf's position
-        self.wolf_publisher = self.create_publisher(Point, 'wolf_position', 10)
-        
-        # Marker publisher for RViz2
-        self.marker_publisher = self.create_publisher(Marker, 'visualization_marker_wolf', 10)
+        # List tracking all wolf
+        self.wolf = [
+            # {
+            #     name : "",
+            #     pose : {x,y,theta},
+            #     marker: None
+            # }
+        ]
 
-        # Timer for updating wolf's position
-        self.timer = self.create_timer(0.5, self.update_wolf_position)
+        # Services
+        self.wolf_spawn_service = self.create_service(EntitySpawn, "sheep_simulation/wolf/spawn", self.wolf_spawn_callback)
 
-        self.sheep_position = None  # To store the sheep's last known position
+        # Publishers and subscribers
+        self.wolf_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/wolf/pose', 10)
 
-    def sheep_callback(self, msg):
-        self.sheep_position = [msg.x, msg.y]
+        # self.wolf_position_subscription = self.create_subscription(
+        #     EntityPose, 'wolf_position', self.wolf_position_callback, 10
+        # )
 
-    def update_wolf_position(self):
-        if self.sheep_position:
-            # Calculate trajectory towards sheep and pen
-            direction_to_sheep_x = self.sheep_position[0] - self.wolf_position[0]
-            direction_to_sheep_y = self.sheep_position[1] - self.wolf_position[1]
-            angle_to_sheep = math.atan2(direction_to_sheep_y, direction_to_sheep_x)
+    def wolf_spawn_callback(self, request, response):
+        try:
+            self.get_logger().info(f"Incoming spawn request:")
+            self.get_logger().info(f"name: {request.name}")
+            self.get_logger().info(f"x: {request.x} y: {request.y}")
+
+            wolf_obj = {
+                "name" : request.name,
+                "pose" : {
+                    "x" : request.x,
+                    "y" : request.y,
+                    "theta" : request.theta
+                },
+                #"marker" : self.create_marker(request.name)
+            }
             
-            # Move towards sheep, aiming to herd it towards the pen
-            step_size = 0.3
-            self.wolf_position[0] += math.cos(angle_to_sheep) * step_size
-            self.wolf_position[1] += math.sin(angle_to_sheep) * step_size
+            response.result = "ok"
 
-            # Publish updated wolf position
-            wolf_msg = Point()
-            wolf_msg.x = self.wolf_position[0]
-            wolf_msg.y = self.wolf_position[1]
-            wolf_msg.z = 0.0
-            self.wolf_publisher.publish(wolf_msg)
-         # Publish visualization marker
-            self.publish_wolf_marker()
+            self.wolf.append(wolf_obj)
+        except:
+            response.result = "fail"
 
-            self.get_logger().info(f"Wolf moved to {self.wolf_position}")
+        return response
 
-    def publish_wolf_marker(self):
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "wolf"
-        marker.id = 1
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose.position.x = self.wolf_position[0]
-        marker.pose.position.y = self.wolf_position[1]
-        marker.pose.position.z = 0.0
-        marker.scale.x = 0.5
-        marker.scale.y = 0.5
-        marker.scale.z = 0.5
-        marker.color.a = 1.0  # Alpha (transparency)
-        marker.color.r = 1.0  # Red for wolf
-        marker.color.g = 0.0
-        marker.color.b = 0.0
-        self.marker_publisher.publish(marker)
+    def update_wolf(self):    
+        for wolf in self.wolf:
+            # update position
+            wolf["pose"] = self.update_wolf_position(wolf["pose"])
+
+            # publish position
+            self.publish_wolf_position(wolf)
+
+
+    def update_wolf_position(self, wolf_pose):
+        # random walk
+        wolf_pose = self.random_walk(wolf_pose)
+
+        # prevent wolf moving outside of grid
+        wolf_pose["x"] = max(-25.0, min(wolf_pose["x"], 25.0))
+        wolf_pose["y"] = max(-25.0, min(wolf_pose["y"], 25.0))
+
+        return wolf_pose
+    
+    def publish_wolf_position(self, wolf):
+        position_msg = EntityPose()
+        position_msg.name = wolf["name"]
+        position_msg.x = wolf["pose"]["x"]
+        position_msg.y = wolf["pose"]["y"]
+        position_msg.theta = wolf["pose"]["theta"]
+
+        self.wolf_position_publisher.publish(position_msg)
+
+    def random_walk(self, pose):
+        # Random movement
+        return {
+            "x" : pose["x"] + random.uniform(-0.5, 0.5),
+            "y" : pose["y"] + random.uniform(-0.5, 0.5),
+            "theta" : pose["theta"]
+        }
+
+    def wolf_position_callback(self, msg):
+        # Update wolf's position when a message is received
+        self.wolf_position = [msg.x, msg.y]
+        self.get_logger().info(f"Received wolf position: {self.wolf_position}")
+
 
 def main(args=None):
     rclpy.init(args=args)
-    wolf_node = WolfNode()
-    rclpy.spin(wolf_node)
+    node = WolfSimulationNode()
+    rclpy.spin(node)
     rclpy.shutdown()

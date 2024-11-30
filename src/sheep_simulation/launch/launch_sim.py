@@ -14,5 +14,10 @@ def generate_launch_description():
             package="sheep_simulation",
             executable="sheep_node",
             name="sheep_node"
+        ),
+        launch_ros.actions.Node(
+            package="sheep_simulation",
+            executable="wolf_node",
+            name="wolf_node"
         )
     ])

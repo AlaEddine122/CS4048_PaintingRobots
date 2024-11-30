@@ -5,8 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Marker1
-        - /Marker1/Topic1
         - /Marker1/Namespaces1
+        - /Marker2
+        - /Marker2/Namespaces1
       Splitter Ratio: 0.5
     Tree Height: 555
   - Class: rviz_common/Selection
@@ -52,14 +53,30 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        {}
+        sheep1: true
+        sheep2: true
+        sheep3: true
+        sheep4: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /sheep_marker
+        Value: /sheep_simulation/simulation/sheep_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Marker
+      Namespaces:
+        wolf1: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /sheep_simulation/simulation/wolf_marker
       Value: true
   Enabled: true
   Global Options:
@@ -114,18 +131,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4.522800445556641
-        Y: -3.5784618854522705
-        Z: -1.011374592781067
+        X: 0.35269543528556824
+        Y: -3.547433614730835
+        Z: -2.0806078910827637
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9153981804847717
+      Pitch: 1.0153981447219849
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.713583946228027
+      Yaw: 4.698583126068115
     Saved: ~
 Window Geometry:
   Displays:
@@ -143,5 +160,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1709
-  X: 60
-  Y: 60
+  X: 160
+  Y: 114

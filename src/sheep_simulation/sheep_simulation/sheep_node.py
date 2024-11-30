@@ -25,14 +25,14 @@ class SheepSimulationNode(Node):
         ]
 
         # Services
-        self.sheep_spawn_service = self.create_service(EntitySpawn, "sheep_spawn", self.sheep_spawn_callback)
+        self.sheep_spawn_service = self.create_service(EntitySpawn, "sheep_simulation/sheep/spawn", self.sheep_spawn_callback)
 
         # Publishers and subscribers
-        self.sheep_position_publisher = self.create_publisher(EntityPose, 'sheep_position', 10)
+        self.sheep_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/sheep/pose', 10)
 
-        self.wolf_position_subscription = self.create_subscription(
-            EntityPose, 'wolf_position', self.wolf_position_callback, 10
-        )
+        # self.wolf_position_subscription = self.create_subscription(
+        #     EntityPose, 'wolf_position', self.wolf_position_callback, 10
+        # )
 
     def sheep_spawn_callback(self, request, response):
         try:
@@ -46,8 +46,7 @@ class SheepSimulationNode(Node):
                     "x" : request.x,
                     "y" : request.y,
                     "theta" : request.theta
-                },
-                #"marker" : self.create_marker(request.name)
+                }
             }
             
             response.result = "ok"
@@ -123,9 +122,6 @@ class SheepSimulationNode(Node):
 
     def random_walk(self, pose):
         # Random movement
-        # self.sheep_position[0] += random.uniform(-0.5, 0.5)
-        # self.sheep_position[1] += random.uniform(-0.5, 0.5)
-        # self.get_logger().info(f"Sheep randomly moved to {self.sheep_position}")
         return {
             "x" : pose["x"] + random.uniform(0, 2.5),
             "y" : pose["y"] + random.uniform(-0.5, 0.5),
