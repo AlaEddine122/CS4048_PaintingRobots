@@ -24,7 +24,7 @@ class BoidsSheep():
         th = np.random.uniform(th_range)
 
         ##loop until we generate valid coord
-        coord_range = (0, 50)
+        coord_range = (-25, 25)
         while True:
             x = np.random.uniform(*coord_range)
             y = np.random.uniform(*coord_range)
@@ -76,7 +76,7 @@ class BoidsSheep():
 
 
         """ Find average angle, since angles are cylindirical (e.g. 0 & 360) we can't just add, need to use sin & cos, then convert back into coord with arctan2 """
-
+        
         #### Combining Vectors
         coh_vector = self.calc_cohesion()
         sep_vector = self.calc_seperation()

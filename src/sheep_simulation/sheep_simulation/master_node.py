@@ -13,8 +13,8 @@ class MasterSimulationNode(Node):
         super().__init__('master_simulation_node')
 
         # timer for simulation
-        self.tick = self.create_timer(0.5, self.update_simulation)
-        self.i = 0
+        self.simulation = self.create_timer(0.5, self.update_simulation)
+        self.tick = 0
 
         # coords defining edge of square grid
         grid = [-25, 25]
@@ -52,50 +52,62 @@ class MasterSimulationNode(Node):
         self.sheep_move_service = self.create_service(EntitySpawn, "sheep_simulation/sheep/move", self.sheep_move_callback)
 
         # spawn 4 sheep
-        for i in range(15):
+        for i in range(4):
             self.spawn_sheep(f"sheep_{i+1}")
-        
+
         # spawn 1 wolf:
         self.spawn_wolf("wolf_1")
     
     def update_simulation(self):
-        self.get_logger().info(f"{self.i}:")
-        if self.i < 10:
+        self.get_logger().info(f"{self.tick}:")
+        if self.tick < 0:
             # take requested position updates
             for sheep in self.sheep_requested_pose:
                 if self.sheep_markers[sheep]:
-                    self.sheep_markers[sheep].pose.position.x = self.sheep_requested_pose[sheep]["x"]
-                    self.sheep_markers[sheep].pose.position.y = self.sheep_requested_pose[sheep]["y"]
+                    self.sheep_markers[sheep].pose.position.x = self.sheep_requested_pose[sheep][0]
+                    self.sheep_markers[sheep].pose.position.y = self.sheep_requested_pose[sheep][1]
 
                     self.sheep_marker_publisher.publish(self.sheep_markers[sheep])
 
         else:
             # or update position with boids logic
-            BoidsSheep.sheep_pos = np.array([[v["x"], v["y"], v["theta"]] for v in self.sheep_requested_pose.values()])
+            BoidsSheep.sheep_pos = np.array([a for a in self.sheep_requested_pose.values()])
+            
             for sheep in self.sheep_requested_pose:
-                boid = BoidsSheep(np.array(list(self.sheep_requested_pose[sheep].values())))
+                # boid = BoidsSheep(np.array(list(self.sheep_requested_pose[sheep].values())))
+                boid = BoidsSheep(np.array(self.sheep_requested_pose[sheep]))
 
                 theta_instant = boid.update_velocity()
                 self.get_logger().info(f"    {sheep}, angle = {theta_instant}")
 
+                delta_x = math.cos(theta_instant) * 0.5
+                delta_y = math.sin(theta_instant) * 0.5
+
                 if self.sheep_markers[sheep]:
-                    self.sheep_markers[sheep].pose.position.x += math.cos(theta_instant) * 0.5
-                    self.sheep_markers[sheep].pose.position.y += math.sin(theta_instant) * 0.5
+                    self.sheep_markers[sheep].pose.position.x += delta_x
+                    self.sheep_markers[sheep].pose.position.y += delta_y
 
                     self.sheep_marker_publisher.publish(self.sheep_markers[sheep])
 
+                #clean up later
+                self.sheep_requested_pose[sheep][0] += delta_x
+                self.sheep_requested_pose[sheep][1] += delta_y
+                self.sheep_requested_pose[sheep][2] = theta_instant
 
 
-        self.i += 1
+
+        self.tick += 1
 
                 
 
-    def spawn_sheep(self, name, x=0.0, y=0.0, theta=0.0):
+    def spawn_sheep(self, name):
+        pose = list(BoidsSheep.generate_unique_coord(np.array([a for a in self.sheep_requested_pose.values()])))
+
         # create request
         self.sheep_spawn_request.name = name
-        self.sheep_spawn_request.x = x
-        self.sheep_spawn_request.y = y
-        self.sheep_spawn_request.theta = theta
+        self.sheep_spawn_request.x = pose[0]
+        self.sheep_spawn_request.y = pose[1]
+        self.sheep_spawn_request.theta = pose[2]
 
         future = self.sheep_spawn_client.call_async(self.sheep_spawn_request)
 
@@ -103,6 +115,9 @@ class MasterSimulationNode(Node):
         marker = self.create_marker("sheep", name)
         self.sheep_markers[name] = marker
         self.sheep_marker_publisher.publish(marker)
+
+        self.sheep_requested_pose[name] = pose
+
 
     def spawn_wolf(self, name, x=0.0, y=0.0, theta=0.0):
         x = random.uniform(-25.0, 25.0)
@@ -127,13 +142,8 @@ class MasterSimulationNode(Node):
             # self.get_logger().info(f"name: {request.name}")
             # self.get_logger().info(f"x: {request.x} y: {request.y}")
 
-            self.sheep_requested_pose[request.name] = {
-                "x" : request.x,
-                "y" : request.y,
-                "theta" : request.theta
-            }
+            self.sheep_requested_pose[request.name] = [request.x, request.y, request.theta]
 
-            
             response.result = "ok"
 
         except:
