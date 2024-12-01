@@ -58,13 +58,14 @@ class BoidsSheep():
 
 
 
-    def __init__(self):
-        self.coord = BoidsSheep.generate_unique_coord(BoidsSheep.sheep_pos)
+    def __init__(self, sheep_pose):
+        self.coord = sheep_pose
+        # self.coord = BoidsSheep.generate_unique_coord(BoidsSheep.sheep_pos)
         
-        self.index = len(BoidsSheep.sheep_pos)
+        # self.index = len(BoidsSheep.sheep_pos)
 
 
-        BoidsSheep.sheep_pos = np.vstack([BoidsSheep.sheep_pos, self.coord]) ##Doesn't flatten the list
+        # BoidsSheep.sheep_pos = np.vstack([BoidsSheep.sheep_pos, self.coord]) ##Doesn't flatten the list
 
     def update_velocity(self):
         """ Implementing boid's algorithm - based on average of 3 vectors

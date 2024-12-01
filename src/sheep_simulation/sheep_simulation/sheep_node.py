@@ -137,7 +137,7 @@ class SheepSimulationNode(Node):
     def random_walk(self, pose):
         # Random movement
         return {
-            "x" : pose["x"] + random.uniform(0, 2.5),
+            "x" : pose["x"] + random.uniform(-0.5, 0.5),
             "y" : pose["y"] + random.uniform(-0.5, 0.5),
             "theta" : pose["theta"]
         }
