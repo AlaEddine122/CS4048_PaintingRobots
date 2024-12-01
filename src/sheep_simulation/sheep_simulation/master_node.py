@@ -9,6 +9,9 @@ class MasterSimulationNode(Node):
     def __init__(self):
         super().__init__('master_simulation_node')
 
+        # timer for simulation
+        self.tick = self.create_timer(0.5, self.update_simulation)
+
         # coords defining edge of square grid
         grid = [-25, 25]
 
@@ -17,6 +20,10 @@ class MasterSimulationNode(Node):
         self.sheep_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/sheep_marker', 10)
         self.wolf_markers = {}
         self.wolf_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/wolf_marker', 10)
+
+        # entity poses
+        self.sheep_requested_pose = {}
+        self.wolf_requested_pose = {}
 
         # clients to spawn entities
         self.sheep_spawn_client = self.create_client(EntitySpawn, 'sheep_simulation/sheep/spawn')
@@ -37,12 +44,27 @@ class MasterSimulationNode(Node):
             EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10
         )
 
+        # service for entity move requests
+        self.sheep_move_service = self.create_service(EntitySpawn, "sheep_simulation/sheep/move", self.sheep_move_callback)
+
         # spawn 4 sheep
         for i in range(4):
-            self.spawn_sheep(f"sheep{i+1}")
+            self.spawn_sheep(f"sheep_{i+1}")
         
         # spawn 1 wolf:
-        self.spawn_wolf("wolf1")
+        self.spawn_wolf("wolf_1")
+    
+    def update_simulation(self):
+        # initially take requested position updates
+        for sheep in self.sheep_requested_pose:
+            if self.sheep_markers[sheep]:
+                self.sheep_markers[sheep].pose.position.x = self.sheep_requested_pose[sheep]["x"]
+                self.sheep_markers[sheep].pose.position.y = self.sheep_requested_pose[sheep]["y"]
+
+                self.sheep_marker_publisher.publish(self.sheep_markers[sheep])
+
+        # or update position with boids logic
+
 
     def spawn_sheep(self, name, x=0.0, y=0.0, theta=0.0):
         # create request
@@ -75,7 +97,25 @@ class MasterSimulationNode(Node):
         self.wolf_markers[name] = marker
         self.wolf_marker_publisher.publish(marker)
 
+    def sheep_move_callback(self, request, response):
+        try:
+            self.get_logger().info(f"Incoming move request:")
+            self.get_logger().info(f"name: {request.name}")
+            self.get_logger().info(f"x: {request.x} y: {request.y}")
 
+            self.sheep_requested_pose[request.name] = {
+                "x" : request.x,
+                "y" : request.y,
+                "theta" : request.theta
+            }
+
+            
+            response.result = "ok"
+
+        except:
+            response.result = "fail"
+
+        return response
 
     def sheep_position_callback(self, response):
         # update marker
@@ -92,7 +132,6 @@ class MasterSimulationNode(Node):
             self.wolf_markers[response.name].pose.position.y = response.y
 
             self.wolf_marker_publisher.publish(self.wolf_markers[response.name])
-
 
     def create_marker(self, entity_type, name):
         marker = Marker()

@@ -8,8 +8,8 @@ class SheepSimulationNode(Node):
     def __init__(self):
         super().__init__('sheep_simulation_node')
 
-        # Timer for sheep logic
-        self.timer = self.create_timer(0.5, self.update_simulation)
+        # Timer for idle sheep movement
+        self.timer = self.create_timer(0.5, self.update_sheep)
 
         # Initial positions
         self.sheep_position = [0.0, 0.0]
@@ -24,8 +24,13 @@ class SheepSimulationNode(Node):
             # }
         ]
 
-        # Services
+        # Clients and Services
         self.sheep_spawn_service = self.create_service(EntitySpawn, "sheep_simulation/sheep/spawn", self.sheep_spawn_callback)
+
+        self.sheep_move_client = self.create_client(EntitySpawn, 'sheep_simulation/sheep/move')
+        while not self.sheep_move_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for sheep /move service...')
+        self.sheep_move_request = EntitySpawn.Request()
 
         # Publishers and subscribers
         self.sheep_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/sheep/pose', 10)
@@ -57,7 +62,7 @@ class SheepSimulationNode(Node):
 
         return response
 
-    def update_simulation(self):
+    def update_sheep(self):
         # if self.wolf_position:
         #     # Calculate distance between sheep and wolf
         #     wolf_distance = ((self.sheep_position[0] - self.wolf_position[0]) ** 2 +
@@ -81,7 +86,16 @@ class SheepSimulationNode(Node):
             sheep["pose"] = self.update_sheep_position(sheep["pose"])
 
             # publish position
-            self.publish_sheep_position(sheep)
+            # self.publish_sheep_position(sheep)
+
+            # request position update
+            # create request
+            self.sheep_move_request.name = sheep["name"]
+            self.sheep_move_request.x = sheep["pose"]["x"]
+            self.sheep_move_request.y =sheep["pose"]["y"]
+            self.sheep_move_request.theta = sheep["pose"]["theta"]
+
+            future = self.sheep_move_client.call_async(self.sheep_move_request)
 
             # update marker
             #sheep["marker"].pose.position.x = sheep["pose"]["x"]
