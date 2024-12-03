@@ -19,5 +19,8 @@ source install/local_setup.bash
 run desired launch file
 ```js
 ros2 launch sheep_simulation launch.py // runs simulation + rviz2 with preloaded config
+
+// development
+ros2 launch sheep_simulation launch_sim.py // runs rviz2 with preloaded config
 ros2 launch sheep_simulation launch_sim.py // runs simulation only
 ```

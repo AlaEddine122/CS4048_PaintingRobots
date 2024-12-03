@@ -11,6 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name, ['launch/launch.py']),
+        ('share/' + package_name, ['launch/launch_rviz.py']),
         ('share/' + package_name, ['launch/launch_sim.py']),
         ('share/' + package_name, ['config/sheep_simulation_config.rviz']),
     ],
