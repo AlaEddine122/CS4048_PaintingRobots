@@ -29,6 +29,17 @@ class WolfSimulationNode(Node):
         # Tracking sheep positions
         self.sheep_positions = {}
 
+        # Pen location for sheep and wolf (from master_node.py)
+        self.pen_x_min = 25.0 - 10.0
+        self.pen_y_min = 25.0 - 10.0
+        self.pen_center_x = self.pen_x_min + 5.0
+        self.pen_center_y = self.pen_y_min + 5.0
+
+        self.wolf_pen_x_min = -25.0
+        self.wolf_pen_y_min = 25.0 - 5.0
+        self.wolf_pen_center_x = self.wolf_pen_x_min + 5.0
+        self.wolf_pen_center_y = self.wolf_pen_y_min + 2.5
+
     def wolf_spawn_callback(self, request, response):
         try:
             wolf_obj = {
@@ -60,72 +71,75 @@ class WolfSimulationNode(Node):
             self.publish_wolf_position(wolf)
 
     def update_wolf_position(self, wolf_pose):
-        # Pen position from master_node.py
-        pen_x_min = 25.0 - 10.0  # grid[0] - pen_size
-        pen_y_min = 25.0 - 10.0  # grid[1] - pen_size
-        pen_x_max = 25.0
-        pen_y_max = 25.0
+        def is_in_pen(x, y, pen_x_min, pen_y_min, pen_size_x=10.0, pen_size_y=10.0):
+            """Check if a position is inside a specified pen."""
+            return pen_x_min <= x <= pen_x_min + pen_size_x and pen_y_min <= y <= pen_y_min + pen_size_y
 
-        def is_in_pen(x, y):
-            """Check if a position is inside the pen."""
-            return pen_x_min <= x <= pen_x_max and pen_y_min <= y <= pen_y_max
-
-        # Prevent the wolf from entering the pen
-        if is_in_pen(wolf_pose["x"], wolf_pose["y"]):
-            # Move the wolf out of the pen if inside
-            if wolf_pose["x"] < pen_x_min:
-                wolf_pose["x"] = pen_x_min - 1.0
-            elif wolf_pose["x"] > pen_x_max:
-                wolf_pose["x"] = pen_x_max + 1.0
-            if wolf_pose["y"] < pen_y_min:
-                wolf_pose["y"] = pen_y_min - 1.0
-            elif wolf_pose["y"] > pen_y_max:
-                wolf_pose["y"] = pen_y_max + 1.0
-            return wolf_pose  # Skip further updates to avoid re-entering the pen
+        # Prevent the wolf from entering the sheep pen
+        if is_in_pen(wolf_pose["x"], wolf_pose["y"], self.pen_x_min, self.pen_y_min):
+            # Move the wolf out of the sheep pen if inside
+            wolf_pose["x"] = self.wolf_pen_center_x
+            wolf_pose["y"] = self.wolf_pen_center_y
+            return wolf_pose  # Skip further updates to avoid re-entering the sheep pen
 
         if self.sheep_positions:
             # Keep track of sheep positions and ensure they stay in the pen
             for sheep_name, (sheep_x, sheep_y) in self.sheep_positions.items():
-                if is_in_pen(sheep_x, sheep_y):
+                if is_in_pen(sheep_x, sheep_y, self.pen_x_min, self.pen_y_min):
                     # Prevent sheep from leaving the pen
                     self.sheep_positions[sheep_name] = (
-                        max(pen_x_min, min(sheep_x, pen_x_max)),
-                        max(pen_y_min, min(sheep_y, pen_y_max)),
+                        max(self.pen_x_min, min(sheep_x, self.pen_x_min + 10.0)),
+                        max(self.pen_y_min, min(sheep_y, self.pen_y_min + 10.0)),
                     )
 
             # Find the furthest sheep outside the pen
-            furthest_sheep, max_distance = None, -float('inf')
+            furthest_sheep = None
+            max_distance = -float('inf')
             for sheep_name, (sheep_x, sheep_y) in self.sheep_positions.items():
-                if not is_in_pen(sheep_x, sheep_y):  # Only consider sheep outside the pen
-                    distance_to_pen = math.sqrt((sheep_x - pen_x_min) ** 2 + (sheep_y - pen_y_min) ** 2)
+                if not is_in_pen(sheep_x, sheep_y, self.pen_x_min, self.pen_y_min):  # Only consider sheep outside the pen
+                    distance_to_pen = math.hypot(sheep_x - self.pen_center_x, sheep_y - self.pen_center_y)
                     if distance_to_pen > max_distance:
-                        furthest_sheep, max_distance = (sheep_name, sheep_x, sheep_y), distance_to_pen
+                        furthest_sheep = (sheep_name, sheep_x, sheep_y)
+                        max_distance = distance_to_pen
 
             if furthest_sheep:
+                # Chase the furthest sheep
                 _, sheep_x, sheep_y = furthest_sheep
 
-                # Calculate a position behind the sheep relative to the pen
-                pen_center_x = (pen_x_min + pen_x_max) / 2
-                pen_center_y = (pen_y_min + pen_y_max) / 2
-                direction_to_pen_x = pen_center_x - sheep_x
-                direction_to_pen_y = pen_center_y - sheep_y
-                length = math.sqrt(direction_to_pen_x ** 2 + direction_to_pen_y ** 2)
+                # Calculate the angle (theta) the sheep needs to head to reach the pen
+                delta_x = self.pen_center_x - sheep_x
+                delta_y = self.pen_center_y - sheep_y
+                theta_to_pen = math.atan2(delta_y, delta_x)
 
-                # Position the wolf behind the sheep (opposite to pen direction)
-                behind_x = sheep_x - (direction_to_pen_x / length) * 1.0  # Offset to be "behind"
-                behind_y = sheep_y - (direction_to_pen_y / length) * 1.0
+                # Calculate the angle (theta) away from the wolf to position behind the sheep
+                delta_wolf_x = sheep_x - wolf_pose["x"]
+                delta_wolf_y = sheep_y - wolf_pose["y"]
+                theta_away_from_wolf = math.atan2(delta_wolf_y, delta_wolf_x)
+
+                # Combine the two directions to guide the sheep to the pen
+                combined_theta = (theta_to_pen + theta_away_from_wolf) / 2
+
+                # Position the wolf behind the sheep
+                distance_behind = 5.0  # Distance to stay behind the sheep
+                behind_x = sheep_x - distance_behind * math.cos(combined_theta)
+                behind_y = sheep_y - distance_behind * math.sin(combined_theta)
 
                 # Move the wolf towards the position behind the sheep
                 direction_x = behind_x - wolf_pose["x"]
                 direction_y = behind_y - wolf_pose["y"]
-                move_length = math.sqrt(direction_x ** 2 + direction_y ** 2)
-
-                wolf_pose["x"] += (direction_x / move_length) * 0.5
-                wolf_pose["y"] += (direction_y / move_length) * 0.5
-
+                move_length = math.hypot(direction_x, direction_y)
+                if move_length > 0:
+                    wolf_pose["x"] += (direction_x / move_length) * 0.5
+                    wolf_pose["y"] += (direction_y / move_length) * 0.5
+            else:
+                # All sheep are in the pen; return to the wolf pen
+                direction_x = self.wolf_pen_center_x - wolf_pose["x"]
+                direction_y = self.wolf_pen_center_y - wolf_pose["y"]
+                move_length = math.hypot(direction_x, direction_y)
+                if move_length > 0:
+                    wolf_pose["x"] += (direction_x / move_length) * 0.5
+                    wolf_pose["y"] += (direction_y / move_length) * 0.5
         return wolf_pose
-
-
 
     def publish_wolf_position(self, wolf):
         position_msg = EntityPose()

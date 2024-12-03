@@ -30,6 +30,14 @@ class SheepSimulationNode(Node):
         # Tracking wolf positions
         self.wolf_positions = {}
 
+        # Pen location (defined in master_node.py)
+        self.pen_x_min = 25.0 - 10.0
+        self.pen_y_min = 25.0 - 10.0
+        self.pen_x_max = 25.0
+        self.pen_y_max = 25.0
+        self.pen_center_x = (self.pen_x_min + self.pen_x_max) / 2
+        self.pen_center_y = (self.pen_y_min + self.pen_y_max) / 2
+
     def sheep_spawn_callback(self, request, response):
         try:
             sheep_obj = {
@@ -61,6 +69,14 @@ class SheepSimulationNode(Node):
             self.publish_sheep_position(sheep)
 
     def update_sheep_position(self, sheep_pose):
+        def is_in_pen(x, y):
+            """Check if a position is inside the pen."""
+            return self.pen_x_min <= x <= self.pen_x_max and self.pen_y_min <= y <= self.pen_y_max
+
+        if is_in_pen(sheep_pose["x"], sheep_pose["y"]):
+            # If the sheep is in the pen, stop moving
+            return sheep_pose
+
         if self.wolf_positions:
             # Calculate the closest wolf
             closest_wolf, min_distance = None, float('inf')
@@ -69,25 +85,37 @@ class SheepSimulationNode(Node):
                 if distance < min_distance:
                     closest_wolf, min_distance = (wolf_x, wolf_y), distance
 
-            if closest_wolf and min_distance < 10.0:  # Wolf is too close; sheep runs away
-                direction_x = sheep_pose["x"] - closest_wolf[0]
-                direction_y = sheep_pose["y"] - closest_wolf[1]
-                length = math.sqrt(direction_x**2 + direction_y**2)
+            if closest_wolf and min_distance < 10.0:  # Wolf is close enough to influence the sheep
+                wolf_x, wolf_y = closest_wolf
 
-                # Move away from the wolf
-                sheep_pose["x"] += (direction_x / length) * 0.5
-                sheep_pose["y"] += (direction_y / length) * 0.5
+                # Calculate the angle (theta) to the pen
+                delta_x = self.pen_center_x - sheep_pose["x"]
+                delta_y = self.pen_center_y - sheep_pose["y"]
+                theta_to_pen = math.atan2(delta_y, delta_x)
+
+                # Calculate the angle (theta) away from the wolf
+                delta_wolf_x = sheep_pose["x"] - wolf_x
+                delta_wolf_y = sheep_pose["y"] - wolf_y
+                theta_away_from_wolf = math.atan2(delta_wolf_y, delta_wolf_x)
+
+                # Combine the two directions to encourage movement towards the pen but away from the wolf
+                combined_theta = (theta_to_pen + theta_away_from_wolf) / 2
+
+                # Move the sheep in the combined direction
+                sheep_pose["x"] += math.cos(combined_theta) * 0.5
+                sheep_pose["y"] += math.sin(combined_theta) * 0.5
             else:
-                # No nearby wolf; random movement
+                # Wolf is far; wander randomly
                 sheep_pose = self.random_walk(sheep_pose)
         else:
-            # No wolves detected; random movement
+            # No wolves detected; wander randomly
             sheep_pose = self.random_walk(sheep_pose)
 
         # Keep sheep within grid boundaries
         sheep_pose["x"] = max(-25.0, min(sheep_pose["x"], 25.0))
         sheep_pose["y"] = max(-25.0, min(sheep_pose["y"], 25.0))
         return sheep_pose
+
 
     def random_walk(self, pose):
         return {

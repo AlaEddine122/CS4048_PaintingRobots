@@ -8,6 +8,8 @@ Panels:
         - /Marker1/Namespaces1
         - /Marker2
         - /Marker2/Namespaces1
+        - /Marker3
+        - /Marker3/Topic1
       Splitter Ratio: 0.5
     Tree Height: 555
   - Class: rviz_common/Selection
@@ -78,6 +80,19 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /sheep_simulation/simulation/wolf_marker
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Marker
+      Namespaces:
+        pen: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /sheep_simulation/simulation/pen
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -124,7 +139,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 63.34037780761719
+      Distance: 81.28723907470703
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -139,10 +154,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0153981447219849
+      Pitch: 1.5297963619232178
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.698583126068115
+      Yaw: 4.718583106994629
     Saved: ~
 Window Geometry:
   Displays:
@@ -160,5 +175,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1709
-  X: 160
-  Y: 114
+  X: 128
+  Y: 82
