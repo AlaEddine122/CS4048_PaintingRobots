@@ -4,6 +4,8 @@ from visualization_msgs.msg import Marker
 from sheep_simulation_interfaces.msg import EntityPose
 from sheep_simulation_interfaces.srv import EntitySpawn
 import random
+import math
+
 
 class MasterSimulationNode(Node):
     def __init__(self):
@@ -51,8 +53,13 @@ class MasterSimulationNode(Node):
         # spawn 1 wolf:
         self.spawn_wolf("wolf1")
 
-    def spawn_sheep(self, name, x=0.0, y=0.0, theta=0.0):
-        # create request
+    def spawn_sheep(self, name):
+    # Generate random spawn positions within the grid boundaries
+        x = random.uniform(-self.grid[0], self.grid[0])
+        y = random.uniform(-self.grid[1], self.grid[1])
+        theta = random.uniform(0, 2 * math.pi)  # Random orientation
+
+        # Create spawn request
         self.sheep_spawn_request.name = name
         self.sheep_spawn_request.x = x
         self.sheep_spawn_request.y = y
@@ -60,10 +67,17 @@ class MasterSimulationNode(Node):
 
         future = self.sheep_spawn_client.call_async(self.sheep_spawn_request)
 
-        # create marker
+        # Create marker for visualization
         marker = self.create_marker("sheep", name)
+        marker.pose.position.x = x
+        marker.pose.position.y = y
+        marker.pose.position.z = 0.0
+        marker.pose.orientation.z = math.sin(theta / 2)
+        marker.pose.orientation.w = math.cos(theta / 2)
+
         self.sheep_markers[name] = marker
         self.sheep_marker_publisher.publish(marker)
+
 
     def spawn_wolf(self, name, x=0.0, y=0.0, theta=0.0):
         # spawn wolf inside pen
