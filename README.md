@@ -21,6 +21,6 @@ run desired launch file
 ros2 launch sheep_simulation launch.py // runs simulation + rviz2 with preloaded config
 
 // development
-ros2 launch sheep_simulation launch_sim.py // runs rviz2 with preloaded config
+ros2 launch sheep_simulation launch_rviz.py // runs rviz2 with preloaded config
 ros2 launch sheep_simulation launch_sim.py // runs simulation only
 ```
