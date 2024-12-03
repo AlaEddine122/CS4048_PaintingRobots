@@ -9,14 +9,16 @@ class MasterSimulationNode(Node):
     def __init__(self):
         super().__init__('master_simulation_node')
 
-        # coords defining edge of square grid
-        grid = [-25, 25]
+        # coords defining x,y edges of square grid
+        self.grid = [25, 25]
 
         # simulation markers
         self.sheep_markers = {}
         self.sheep_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/sheep_marker', 10)
         self.wolf_markers = {}
         self.wolf_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/wolf_marker', 10)
+
+        self.pen_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/pen', 10)
 
         # clients to spawn entities
         self.sheep_spawn_client = self.create_client(EntitySpawn, 'sheep_simulation/sheep/spawn')
@@ -42,7 +44,13 @@ class MasterSimulationNode(Node):
             self.spawn_sheep(f"sheep{i+1}")
         
         # spawn 1 wolf:
-        self.spawn_wolf("wolf1")
+        x = random.uniform(-25.0, 25.0)
+        y = random.uniform(-25.0, 25.0)
+        self.spawn_wolf("wolf1", x=-10.0, y=-10.0)
+
+        # publish pen
+        self.pen_size = 10.0
+        self.pen_marker_publisher.publish(self.create_pen_marker(size=self.pen_size))
 
     def spawn_sheep(self, name, x=0.0, y=0.0, theta=0.0):
         # create request
@@ -59,9 +67,6 @@ class MasterSimulationNode(Node):
         self.sheep_marker_publisher.publish(marker)
 
     def spawn_wolf(self, name, x=0.0, y=0.0, theta=0.0):
-        x = random.uniform(-25.0, 25.0)
-        y = random.uniform(-25.0, 25.0)
-
         # create request
         self.wolf_spawn_request.name = name
         self.wolf_spawn_request.x = x
@@ -75,7 +80,8 @@ class MasterSimulationNode(Node):
         self.wolf_markers[name] = marker
         self.wolf_marker_publisher.publish(marker)
 
-
+    def in_pen(self, x, y):
+        return (x >= self.grid[0] - self.pen_size) and (y >= self.grid[1] - self.pen_size)
 
     def sheep_position_callback(self, response):
         # update marker
@@ -84,6 +90,9 @@ class MasterSimulationNode(Node):
             self.sheep_markers[response.name].pose.position.y = response.y
 
             self.sheep_marker_publisher.publish(self.sheep_markers[response.name])
+
+        if self.in_pen(response.x, response.y):
+            self.get_logger().info(f"{response.name} in pen")
     
     def wolf_position_callback(self, response):
         # update marker
@@ -93,6 +102,8 @@ class MasterSimulationNode(Node):
 
             self.wolf_marker_publisher.publish(self.wolf_markers[response.name])
 
+        if self.in_pen(response.x, response.y):
+            self.get_logger().info(f"{response.name} in pen")
 
     def create_marker(self, entity_type, name):
         marker = Marker()
@@ -120,6 +131,24 @@ class MasterSimulationNode(Node):
 
         return marker
 
+    def create_pen_marker(self, size=10.0):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.ns = "pen"
+        marker.id = 0
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+        marker.pose.position.x = self.grid[0] - (size/2)
+        marker.pose.position.y = self.grid[1] - (size/2)
+        marker.pose.position.z = 0.0
+        marker.scale.x = size
+        marker.scale.y = size
+        marker.scale.z = 0.1
+        marker.color.a = 0.5
+        marker.color.r = 0.0
+        marker.color.g = 0.0
+        marker.color.b = 1.0
+        return marker
 
 def main(args=None):
     rclpy.init(args=args)
