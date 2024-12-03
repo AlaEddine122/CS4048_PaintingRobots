@@ -39,18 +39,20 @@ class MasterSimulationNode(Node):
             EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10
         )
 
+        # publish sheep and wolf pen
+        self.pen_size = 10.0
+        self.pen_marker_publisher.publish(self.create_pen_marker("sheep_pen", size=self.pen_size))
+        self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen", size=self.pen_size/2))
+
         # spawn 4 sheep
         for i in range(4):
             self.spawn_sheep(f"sheep{i+1}")
         
         # spawn 1 wolf:
-        x = random.uniform(-25.0, 25.0)
-        y = random.uniform(-25.0, 25.0)
-        self.spawn_wolf("wolf1", x=-10.0, y=-10.0)
+        self.spawn_wolf("wolf1")
 
-        # publish pen
-        self.pen_size = 10.0
-        self.pen_marker_publisher.publish(self.create_pen_marker(size=self.pen_size))
+    def in_sheep_pen(self, x, y):
+        return (x >= self.grid[0] - self.pen_size) and (y >= self.grid[1] - self.pen_size)
 
     def spawn_sheep(self, name, x=0.0, y=0.0, theta=0.0):
         # create request
@@ -66,7 +68,12 @@ class MasterSimulationNode(Node):
         self.sheep_markers[name] = marker
         self.sheep_marker_publisher.publish(marker)
 
-    def spawn_wolf(self, name, x=0.0, y=0.0, theta=0.0):
+    def spawn_wolf(self, name):
+        # spawn at random point inside wolf pen
+        x = random.uniform(-self.grid[0], (-self.grid[0] + self.pen_size/2))
+        y = random.uniform((self.grid[1] - self.pen_size/2), self.grid[1])
+        theta = 0.0
+
         # create request
         self.wolf_spawn_request.name = name
         self.wolf_spawn_request.x = x
@@ -80,9 +87,6 @@ class MasterSimulationNode(Node):
         self.wolf_markers[name] = marker
         self.wolf_marker_publisher.publish(marker)
 
-    def in_pen(self, x, y):
-        return (x >= self.grid[0] - self.pen_size) and (y >= self.grid[1] - self.pen_size)
-
     def sheep_position_callback(self, response):
         # update marker
         if self.sheep_markers[response.name]:
@@ -91,7 +95,7 @@ class MasterSimulationNode(Node):
 
             self.sheep_marker_publisher.publish(self.sheep_markers[response.name])
 
-        if self.in_pen(response.x, response.y):
+        if self.in_sheep_pen(response.x, response.y):
             self.get_logger().info(f"{response.name} in pen")
     
     def wolf_position_callback(self, response):
@@ -102,7 +106,7 @@ class MasterSimulationNode(Node):
 
             self.wolf_marker_publisher.publish(self.wolf_markers[response.name])
 
-        if self.in_pen(response.x, response.y):
+        if self.in_sheep_pen(response.x, response.y):
             self.get_logger().info(f"{response.name} in pen")
 
     def create_marker(self, entity_type, name):
@@ -131,23 +135,34 @@ class MasterSimulationNode(Node):
 
         return marker
 
-    def create_pen_marker(self, size=10.0):
+    def create_pen_marker(self, name, size=10.0):
         marker = Marker()
         marker.header.frame_id = "map"
-        marker.ns = "pen"
+        marker.ns = name
         marker.id = 0
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
-        marker.pose.position.x = self.grid[0] - (size/2)
-        marker.pose.position.y = self.grid[1] - (size/2)
-        marker.pose.position.z = 0.0
         marker.scale.x = size
         marker.scale.y = size
-        marker.scale.z = 0.1
-        marker.color.a = 0.5
-        marker.color.r = 0.0
-        marker.color.g = 0.0
-        marker.color.b = 1.0
+
+        if name == "sheep_pen":
+            marker.pose.position.x = self.grid[0] - (size/2)
+            marker.pose.position.y = self.grid[1] - (size/2)
+            marker.pose.position.z = 0.0
+            marker.scale.z = 0.1
+            marker.color.a = 0.5
+            marker.color.r = 0.0
+            marker.color.g = 0.0
+            marker.color.b = 1.0
+        elif name == "wolf_pen":
+            marker.pose.position.x = -self.grid[0] + (size/2)
+            marker.pose.position.y = self.grid[1] - (size/2)
+            marker.pose.position.z = 0.0
+            marker.scale.z = 0.1
+            marker.color.a = 0.5
+            marker.color.r = 0.5
+            marker.color.g = 0.0
+            marker.color.b = 0.0
         return marker
 
 def main(args=None):
