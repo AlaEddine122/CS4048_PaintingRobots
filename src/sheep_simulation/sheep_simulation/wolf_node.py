@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sheep_simulation_interfaces.msg import EntityPose
-from sheep_simulation_interfaces.srv import EntitySpawn
+from sheep_simulation_interfaces.srv import EntitySpawn, Grid
 import math
 
 
@@ -18,27 +18,61 @@ class WolfSimulationNode(Node):
         # Services
         self.wolf_spawn_service = self.create_service(EntitySpawn, "sheep_simulation/wolf/spawn", self.wolf_spawn_callback)
 
+        # Clients
+        self.grid_init_client = self.create_client(Grid, 'sheep_simulation/grid')
+        while not self.grid_init_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for grid service...')
+
         # Publishers
         self.wolf_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/wolf/pose', 10)
 
         # Subscribers
-        self.sheep_position_subscription = self.create_subscription(
-            EntityPose, 'sheep_simulation/sheep/pose', self.sheep_position_callback, 10
-        )
+        self.sheep_position_subscription = self.create_subscription(EntityPose, 'sheep_simulation/sheep/pose', self.sheep_position_callback, 10)
+        # self.wolf_position_subscription = self.create_subscription(Grid, 'sheep_simulation/grid', self.grid_initialisation_callback, 10)
 
         # Tracking sheep positions
         self.sheep_positions = {}
 
-        # Pen location for sheep and wolf (from master_node.py)
-        self.pen_x_min = 25.0 - 10.0
-        self.pen_y_min = 25.0 - 10.0
-        self.pen_center_x = self.pen_x_min + 5.0
-        self.pen_center_y = self.pen_y_min + 5.0
+        self.init_grid()
 
-        self.wolf_pen_x_min = -25.0
-        self.wolf_pen_y_min = 25.0 - 5.0
-        self.wolf_pen_center_x = self.wolf_pen_x_min + 5.0
-        self.wolf_pen_center_y = self.wolf_pen_y_min + 2.5
+        # # Pen location for sheep and wolf (from master_node.py)
+        # self.pen_x_min = 25.0 - 10.0
+        # self.pen_y_min = 25.0 - 10.0
+        # self.pen_center_x = self.pen_x_min + 5.0
+        # self.pen_center_y = self.pen_y_min + 5.0
+
+        # self.wolf_pen_x_min = -25.0
+        # self.wolf_pen_y_min = 25.0 - 5.0
+        # self.wolf_pen_center_x = self.wolf_pen_x_min + 5.0
+        # self.wolf_pen_center_y = self.wolf_pen_y_min + 2.5
+
+    def init_grid(self):
+        # Create request
+        grid_request = Grid.Request()
+
+        future = self.grid_init_client.call_async(grid_request)
+
+        rclpy.spin_until_future_complete(self, future)
+
+        self.grid = [
+            [future.result().xmin, future.result().xmax],
+            [future.result().ymin, future.result().ymax]
+        ]
+
+        pen_size = future.result().pensize
+
+        self.pen_x_min = self.grid[0][1] - pen_size
+        self.pen_y_min = self.grid[1][1] - pen_size
+        self.pen_x_max = self.grid[0][1]
+        self.pen_y_max = self.grid[1][1]
+        self.pen_center_x = self.pen_x_min + pen_size/2
+        self.pen_center_y = self.pen_y_min + pen_size/2
+
+        self.wolf_pen_x_min = self.grid[0][0]
+        self.wolf_pen_y_min = self.grid[1][1] - pen_size/2
+        self.wolf_pen_center_x = self.wolf_pen_x_min + pen_size/4
+        self.wolf_pen_center_y = self.wolf_pen_y_min + pen_size/4
+
 
     def wolf_spawn_callback(self, request, response):
         try:
@@ -56,6 +90,7 @@ class WolfSimulationNode(Node):
         except Exception as e:
             response.result = "fail"
             self.get_logger().error(f"Failed to spawn wolf: {e}")
+
         return response
 
     def sheep_position_callback(self, msg):
@@ -63,6 +98,9 @@ class WolfSimulationNode(Node):
         self.sheep_positions[msg.name] = (msg.x, msg.y)
 
     def update_simulation(self):
+        if not hasattr(self, "grid"):
+            return
+        
         for wolf in self.wolves:
             # Update the wolf's position
             wolf["pose"] = self.update_wolf_position(wolf["pose"])

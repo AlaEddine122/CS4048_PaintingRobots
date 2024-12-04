@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sheep_simulation_interfaces.msg import EntityPose
-from sheep_simulation_interfaces.srv import EntitySpawn
+from sheep_simulation_interfaces.srv import EntitySpawn, Grid
 import math
 import random
 
@@ -19,24 +19,52 @@ class SheepSimulationNode(Node):
         # Services
         self.sheep_spawn_service = self.create_service(EntitySpawn, "sheep_simulation/sheep/spawn", self.sheep_spawn_callback)
 
+        # Clients
+        self.grid_init_client = self.create_client(Grid, 'sheep_simulation/grid')
+        while not self.grid_init_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for grid service...')
+
         # Publishers
         self.sheep_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/sheep/pose', 10)
 
         # Subscribers
-        self.wolf_position_subscription = self.create_subscription(
-            EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10
-        )
+        # self.grid_subscription = self.create_subscription(Grid, 'sheep_simulation/gtid', self.grid_initialisation_callback, 10)
+        self.wolf_position_subscription = self.create_subscription( EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10)
 
         # Tracking wolf positions
         self.wolf_positions = {}
 
-        # Pen location (defined in master_node.py)
-        self.pen_x_min = 25.0 - 10.0
-        self.pen_y_min = 25.0 - 10.0
-        self.pen_x_max = 25.0
-        self.pen_y_max = 25.0
-        self.pen_center_x = (self.pen_x_min + self.pen_x_max) / 2
-        self.pen_center_y = (self.pen_y_min + self.pen_y_max) / 2
+        self.init_grid()
+
+        # # Pen location (defined in master_node.py)
+        # self.pen_x_min = 25.0 - 10.0
+        # self.pen_y_min = 25.0 - 10.0
+        # self.pen_x_max = 25.0
+        # self.pen_y_max = 25.0
+        # self.pen_center_x = (self.pen_x_min + self.pen_x_max) / 2
+        # self.pen_center_y = (self.pen_y_min + self.pen_y_max) / 2
+
+    def init_grid(self):
+        # Create request
+        grid_request = Grid.Request()
+
+        future = self.grid_init_client.call_async(grid_request)
+
+        rclpy.spin_until_future_complete(self, future)
+
+        self.grid = [
+            [future.result().xmin, future.result().xmax],
+            [future.result().ymin, future.result().ymax]
+        ]
+
+        pen_size = future.result().pensize
+
+        self.pen_x_min = self.grid[0][1] - pen_size
+        self.pen_y_min = self.grid[1][1] - pen_size
+        self.pen_x_max = self.grid[0][1]
+        self.pen_y_max = self.grid[1][1]
+        self.pen_center_x = self.pen_x_min + pen_size/2
+        self.pen_center_y = self.pen_y_min + pen_size/2
 
     def sheep_spawn_callback(self, request, response):
         try:
@@ -60,7 +88,23 @@ class SheepSimulationNode(Node):
         # Track wolf positions by their names
         self.wolf_positions[msg.name] = (msg.x, msg.y)
 
+    def grid_initialisation_callback(self, msg):
+        self.grid = [
+            [msg.xmin, msg.xmax],
+            [msg.ymin, msg.ymax]
+        ]
+
+        self.pen_x_min = self.grid[0][1] - 10.0
+        self.pen_y_min = self.grid[1][1] - 10.0
+        self.pen_x_max = self.grid[0][1]
+        self.pen_y_max = self.grid[1][1]
+        self.pen_center_x = (self.pen_x_min + self.pen_x_max) / 2
+        self.pen_center_y = (self.pen_y_min + self.pen_y_max) / 2
+
     def update_simulation(self):
+        if not hasattr(self, "grid"):
+            return
+        
         for sheep in self.sheep:
             # Update the sheep's position
             sheep["pose"] = self.update_sheep_position(sheep["pose"])
@@ -69,6 +113,7 @@ class SheepSimulationNode(Node):
             self.publish_sheep_position(sheep)
 
     def update_sheep_position(self, sheep_pose):
+        
         def is_in_pen(x, y):
             """Check if a position is inside the pen."""
             return self.pen_x_min <= x <= self.pen_x_max and self.pen_y_min <= y <= self.pen_y_max
