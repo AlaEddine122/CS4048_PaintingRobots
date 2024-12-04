@@ -60,19 +60,19 @@ class WolfSimulationNode(Node):
             [future.result().ymin, future.result().ymax]
         ]
 
-        pen_size = future.result().pensize
+        self.pen_size = future.result().pensize
 
-        self.pen_x_min = self.grid[0][1] - pen_size
-        self.pen_y_min = self.grid[1][1] - pen_size
+        self.pen_x_min = self.grid[0][1] - self.pen_size
+        self.pen_y_min = self.grid[1][1] - self.pen_size
         self.pen_x_max = self.grid[0][1]
         self.pen_y_max = self.grid[1][1]
-        self.pen_center_x = self.pen_x_min + pen_size/2
-        self.pen_center_y = self.pen_y_min + pen_size/2
+        self.pen_center_x = self.pen_x_min + self.pen_size/2
+        self.pen_center_y = self.pen_y_min + self.pen_size/2
 
         # Define wolf pens
         self.wolf_pen_locations = {
-            "wolf1": (self.grid[0][0] + pen_size/4, self.grid[0][1] - pen_size/4),
-            "wolf2": (self.grid[0][0] + pen_size/4, self.grid[1][0] + pen_size/4),
+            "wolf1": (self.grid[0][0] + self.pen_size/4, self.grid[0][1] - self.pen_size/4),
+            "wolf2": (self.grid[0][0] + self.pen_size/4, self.grid[1][0] + self.pen_size/4),
         }
         
         # self.wolf_pen_x_min = self.grid[0][0]
@@ -182,6 +182,10 @@ class WolfSimulationNode(Node):
             if move_length > 0:
                 wolf_pose["x"] += (direction_x / move_length) * 0.5
                 wolf_pose["y"] += (direction_y / move_length) * 0.5
+
+        # limit to grid walls
+        wolf_pose["x"] = max(self.grid[0][0], min(wolf_pose["x"], self.grid[0][1]))
+        wolf_pose["y"] = max(self.grid[1][0], min(wolf_pose["y"], self.grid[1][1]))
 
         return wolf_pose
 

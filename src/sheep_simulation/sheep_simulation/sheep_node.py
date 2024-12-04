@@ -140,8 +140,9 @@ class SheepSimulationNode(Node):
         else:
             sheep_pose = self.random_walk(sheep_pose)
 
-        sheep_pose["x"] = max(-25.0, min(sheep_pose["x"], 25.0))
-        sheep_pose["y"] = max(-25.0, min(sheep_pose["y"], 25.0))
+        sheep_pose["x"] = max(self.grid[0][0], min(sheep_pose["x"], self.grid[0][1]))
+        sheep_pose["y"] = max(self.grid[1][0], min(sheep_pose["y"], self.grid[1][1]))
+        
         return sheep_pose
 
     def random_walk(self, pose):

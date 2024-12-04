@@ -38,7 +38,8 @@ class MasterSimulationNode(Node):
         self.wolf_position_subscription = self.create_subscription(EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10)
 
         # create grid
-        self.grid = self.create_grid(size=20.0)
+        grid_size = 20.0
+        self.grid = self.create_grid(size=grid_size)
         # self.grid_publisher = self.create_publisher(Grid, "sheep_simulation/grid", 10)
         # self.grid_publisher.publish(grid_msg)
 
@@ -49,12 +50,12 @@ class MasterSimulationNode(Node):
         self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen2", size=self.pen_size / 2))
 
         # spawn 6 sheep in 2 groups of 3
-        self.spawn_sheep_group("group1", center_x=-10.0, center_y=10.0)
-        self.spawn_sheep_group("group2", center_x=10.0, center_y=-10.0)
+        self.spawn_sheep_group("group1", center_x=-(grid_size/3), center_y=(grid_size/3))
+        self.spawn_sheep_group("group2", center_x=(grid_size/3), center_y=-(grid_size/3))
 
-        # spawn 2 wolves
-        self.spawn_wolf("wolf1", x=-20.0, y=20.0)
-        self.spawn_wolf("wolf2", x=-20.0, y=-20.0)
+        # spawn 2 wolves in respective pens
+        self.spawn_wolf("wolf1", x=self.grid[0][0]+self.pen_size/4, y=self.grid[1][1]-self.pen_size/4)
+        self.spawn_wolf("wolf2", x=self.grid[0][0]+self.pen_size/4, y=self.grid[1][0]+self.pen_size/4)
 
     def create_grid(self, size):
         grid = [
@@ -71,7 +72,7 @@ class MasterSimulationNode(Node):
             name = f"{group_name}_sheep{i+1}"
             self.spawn_sheep(name, x, y)
 
-    def spawn_sheep(self, name):
+    def spawn_sheep(self, name, x, y):
     # Generate random spawn positions within the grid boundaries
         theta = random.uniform(0, 2 * math.pi)  # Random orientation
 
@@ -95,11 +96,7 @@ class MasterSimulationNode(Node):
         self.sheep_marker_publisher.publish(marker)
 
 
-    def spawn_wolf(self, name, x=0.0, y=0.0, theta=0.0):
-        # spawn wolf inside pen
-        x = random.uniform(self.grid[0][0], (self.grid[0][0] + self.pen_size/2))
-        y = random.uniform((self.grid[1][1] - self.pen_size/2), self.grid[1][1])
-
+    def spawn_wolf(self, name, x, y):
         # create request
         self.wolf_spawn_request.name = name
         self.wolf_spawn_request.x = x
@@ -129,9 +126,6 @@ class MasterSimulationNode(Node):
             self.wolf_markers[response.name].pose.position.x = response.x
             self.wolf_markers[response.name].pose.position.y = response.y
             self.wolf_marker_publisher.publish(self.wolf_markers[response.name])
-
-        if self.in_pen(response.x, response.y):
-            self.get_logger().info(f"{response.name} in pen")
 
     def grid_init_callback(self, request, response):
         response.xmin = self.grid[0][0]
@@ -184,9 +178,19 @@ class MasterSimulationNode(Node):
             marker.color.r = 0.0
             marker.color.g = 0.0
             marker.color.b = 1.0
-        elif name == "wolf_pen":
+
+        elif name == "wolf_pen1":
             marker.pose.position.x = self.grid[0][0] + (size/2)
             marker.pose.position.y = self.grid[1][1] - (size/2)
+            marker.pose.position.z = 0.0
+            marker.color.a = 0.5
+            marker.color.r = 0.5
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+
+        elif name == "wolf_pen2":
+            marker.pose.position.x = self.grid[0][0] + (size/2)
+            marker.pose.position.y = self.grid[0][0] + (size/2)
             marker.pose.position.z = 0.0
             marker.color.a = 0.5
             marker.color.r = 0.5
