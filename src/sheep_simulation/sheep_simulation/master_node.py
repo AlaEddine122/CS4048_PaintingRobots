@@ -45,14 +45,16 @@ class MasterSimulationNode(Node):
         # create pens
         self.pen_size = 5.0
         self.pen_marker_publisher.publish(self.create_pen_marker("sheep_pen", size=self.pen_size))
-        self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen", size=self.pen_size/2))
+        self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen1", size=self.pen_size / 2))
+        self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen2", size=self.pen_size / 2))
 
-        # spawn 4 sheep
-        for i in range(4):
-            self.spawn_sheep(f"sheep{i+1}")
-        
-        # spawn 1 wolf:
-        self.spawn_wolf("wolf1")
+        # spawn 6 sheep in 2 groups of 3
+        self.spawn_sheep_group("group1", center_x=-10.0, center_y=10.0)
+        self.spawn_sheep_group("group2", center_x=10.0, center_y=-10.0)
+
+        # spawn 2 wolves
+        self.spawn_wolf("wolf1", x=-20.0, y=20.0)
+        self.spawn_wolf("wolf2", x=-20.0, y=-20.0)
 
     def create_grid(self, size):
         grid = [
@@ -62,10 +64,15 @@ class MasterSimulationNode(Node):
 
         return grid
 
+    def spawn_sheep_group(self, group_name, center_x, center_y):
+        for i in range(3):
+            x = random.uniform(center_x - 2.0, center_x + 2.0)
+            y = random.uniform(center_y - 2.0, center_y + 2.0)
+            name = f"{group_name}_sheep{i+1}"
+            self.spawn_sheep(name, x, y)
+
     def spawn_sheep(self, name):
     # Generate random spawn positions within the grid boundaries
-        x = random.uniform(self.grid[0][0], self.grid[0][1])
-        y = random.uniform(self.grid[1][0], self.grid[1][1])
         theta = random.uniform(0, 2 * math.pi)  # Random orientation
 
         # Create spawn request
@@ -101,8 +108,10 @@ class MasterSimulationNode(Node):
 
         future = self.wolf_spawn_client.call_async(self.wolf_spawn_request)
 
-        # create marker
+        # Create marker
         marker = self.create_marker("wolf", name)
+        marker.pose.position.x = x
+        marker.pose.position.y = y
         self.wolf_markers[name] = marker
         self.wolf_marker_publisher.publish(marker)
 
@@ -110,22 +119,15 @@ class MasterSimulationNode(Node):
         return (x >= self.grid[0][1] - self.pen_size) and (y >= self.grid[1][1] - self.pen_size)
 
     def sheep_position_callback(self, response):
-        # update marker
         if self.sheep_markers[response.name]:
             self.sheep_markers[response.name].pose.position.x = response.x
             self.sheep_markers[response.name].pose.position.y = response.y
-
             self.sheep_marker_publisher.publish(self.sheep_markers[response.name])
 
-        if self.in_pen(response.x, response.y):
-            self.get_logger().info(f"{response.name} in pen")
-    
     def wolf_position_callback(self, response):
-        # update marker
         if self.wolf_markers[response.name]:
             self.wolf_markers[response.name].pose.position.x = response.x
             self.wolf_markers[response.name].pose.position.y = response.y
-
             self.wolf_marker_publisher.publish(self.wolf_markers[response.name])
 
         if self.in_pen(response.x, response.y):
@@ -147,20 +149,17 @@ class MasterSimulationNode(Node):
         marker.id = 0
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
-        marker.pose.position.x = 0.0
-        marker.pose.position.y = 0.0
-        marker.pose.position.z = 0.0
         marker.scale.x = 0.5
         marker.scale.y = 0.5
         marker.scale.z = 0.5
-        marker.color.a = 1.0 
-        
-        if entity_type == "sheep": # green for sheep
-            marker.color.r = 0.0 
+        marker.color.a = 1.0
+
+        if entity_type == "sheep":  # Green for sheep
+            marker.color.r = 0.0
             marker.color.g = 1.0
             marker.color.b = 0.0
-        elif entity_type == "wolf": # red for wolf
-            marker.color.r = 1.0 
+        elif entity_type == "wolf":  # Red for wolf
+            marker.color.r = 1.0
             marker.color.g = 0.0
             marker.color.b = 0.0
 
@@ -196,9 +195,9 @@ class MasterSimulationNode(Node):
 
         return marker
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = MasterSimulationNode()
     rclpy.spin(node)
     rclpy.shutdown()
-
