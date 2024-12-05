@@ -124,25 +124,35 @@ class WolfSimulationNode(Node):
             return
 
         self.assign_sheep_groups()  # Update sheep group assignments
+
+        self.get_logger().info(f"sheep safe: {self.sheep_safe()}")
         
         for wolf_index, wolf in enumerate(self.wolves):
             # Update the wolf's position
-            wolf["pose"] = self.update_wolf_position(wolf["pose"], wolf_index)
+            if self.sheep_safe():
+                self.return_to_pen(wolf["pose"], wolf_index)
+            else:
+                wolf["pose"] = self.herd_sheep(wolf["pose"], wolf_index)
 
             # Publish the updated position
             self.publish_wolf_position(wolf)
+    
+    def sheep_safe(self):
+        return all([(pose[0] >= self.pen_x_min) and (pose[1] >= self.pen_y_min) for pose in self.sheep_positions.values()])
 
-    def update_wolf_position(self, wolf_pose, wolf_index):
-        def is_in_pen(x, y, pen_x_min, pen_y_min):
-            return pen_x_min <= x <= pen_x_min + self.pen_size and pen_y_min <= y <= pen_y_min + self.pen_size
+    def return_to_pen(self, wolf_pose, wolf_index):
+        # All sheep are in the pen; return to the wolf pen if not in already
+        wolf_pen_x, wolf_pen_y = self.wolf_pen_locations[f"wolf{wolf_index + 1}"]
 
-        # Prevent the wolf from entering the sheep pen
-        if is_in_pen(wolf_pose["x"], wolf_pose["y"], self.pen_x_min, self.pen_y_min):
-            # Move the wolf back to its pen
-            wolf_pen_x, wolf_pen_y = self.wolf_pen_locations[f"wolf{wolf_index + 1}"]
-            wolf_pose["x"], wolf_pose["y"] = wolf_pen_x, wolf_pen_y
-            return wolf_pose
+        if not((wolf_pose["x"] <= wolf_pen_x+self.pen_size/4) and (wolf_pose["y"] <= wolf_pen_y+self.pen_size/4)):
+            direction_x = wolf_pen_x - wolf_pose["x"]
+            direction_y = wolf_pen_y - wolf_pose["y"]
+            move_length = math.hypot(direction_x, direction_y)
+            if move_length > 0:
+                wolf_pose["x"] += (direction_x / move_length) * 0.5
+                wolf_pose["y"] += (direction_y / move_length) * 0.5
 
+    def herd_sheep(self, wolf_pose, wolf_index):
         # Target the assigned group of sheep
         target_sheep = [
             (name, pos) for name, pos in self.sheep_positions.items()
@@ -173,15 +183,7 @@ class WolfSimulationNode(Node):
             if move_length > 0:
                 wolf_pose["x"] += (direction_x / move_length) * 0.5
                 wolf_pose["y"] += (direction_y / move_length) * 0.5
-        else:
-            # All sheep are in the pen; return to the wolf pen
-            wolf_pen_x, wolf_pen_y = self.wolf_pen_locations[f"wolf{wolf_index + 1}"]
-            direction_x = wolf_pen_x - wolf_pose["x"]
-            direction_y = wolf_pen_y - wolf_pose["y"]
-            move_length = math.hypot(direction_x, direction_y)
-            if move_length > 0:
-                wolf_pose["x"] += (direction_x / move_length) * 0.5
-                wolf_pose["y"] += (direction_y / move_length) * 0.5
+
 
         # limit to grid walls
         wolf_pose["x"] = max(self.grid[0][0], min(wolf_pose["x"], self.grid[0][1]))
