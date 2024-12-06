@@ -113,28 +113,31 @@ class SheepSimulationNode(Node):
         
         positions = []
         for sheep in self.sheep:
-            sheep["pose"] = self.update_sheep_position(sheep["pose"])
+            if self.sheep_safe():
+                sheep["pose"] = self.update_sheep_in_pen(sheep["pose"])
+            else:
+                sheep["pose"] = self.update_sheep_position(sheep["pose"])
 
-            localsheep = np.array([
-                sheep["pose"]["x"],
-                sheep["pose"]["y"],
-                sheep["pose"]["theta"]
-            ])
-            globalsheep = np.array([
-                [sheep["pose"]["x"],
-                sheep["pose"]["y"],
-                sheep["pose"]["theta"]]
-                for sheep in self.sheep
-            ])
-            #sheep["pose"]["x"], sheep["pose"]["y"], sheep["pose"]["theta"] = self.boids.update_velocity(localsheep, globalsheep)
-            #self.publish_sheep_position(sheep)
-            # self.get_logger().info(f"localsheep: {localsheep}")
-            # self.get_logger().info(f"globalsheep: {globalsheep}")
-            dx, dy, dtheta = self.boids.update_velocity(localsheep, globalsheep)
+                localsheep = np.array([
+                    sheep["pose"]["x"],
+                    sheep["pose"]["y"],
+                    sheep["pose"]["theta"]
+                ])
+                globalsheep = np.array([
+                    [sheep["pose"]["x"],
+                    sheep["pose"]["y"],
+                    sheep["pose"]["theta"]]
+                    for sheep in self.sheep
+                ])
+                #sheep["pose"]["x"], sheep["pose"]["y"], sheep["pose"]["theta"] = self.boids.update_velocity(localsheep, globalsheep)
+                #self.publish_sheep_position(sheep)
+                # self.get_logger().info(f"localsheep: {localsheep}")
+                # self.get_logger().info(f"globalsheep: {globalsheep}")
+                dx, dy, dtheta = self.boids.update_velocity(localsheep, globalsheep)
 
-            sheep["pose"]["x"] += dx
-            sheep["pose"]["y"] += dy
-            sheep["pose"]["theta"] += dtheta
+                sheep["pose"]["x"] += dx
+                sheep["pose"]["y"] += dy
+                sheep["pose"]["theta"] += dtheta
 
             sheep["pose"]["x"] = max(self.grid[0][0], min(sheep["pose"]["x"], self.grid[0][1]))
             sheep["pose"]["y"] = max(self.grid[1][0], min(sheep["pose"]["y"], self.grid[1][1]))
@@ -148,6 +151,16 @@ class SheepSimulationNode(Node):
         
         self.publish_sheep_positions(positions)
 
+    def sheep_safe(self):
+        return all([(sheep["pose"]["x"] >= self.pen_x_min) and (sheep["pose"]["y"] >= self.pen_y_min) for sheep in self.sheep])
+    
+    def update_sheep_in_pen(self, sheep_pose):
+        sheep_pose = self.random_walk(sheep_pose)
+
+        sheep_pose["x"] = max(self.pen_x_min, sheep_pose["x"])
+        sheep_pose["y"] = max(self.pen_x_min, sheep_pose["y"])
+
+        return sheep_pose
 
     def update_sheep_position(self, sheep_pose):
         

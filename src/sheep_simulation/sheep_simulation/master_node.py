@@ -44,7 +44,7 @@ class MasterSimulationNode(Node):
         # self.grid_publisher.publish(grid_msg)
 
         # create pens
-        self.pen_size = 15.0
+        self.pen_size = 10.0
         pen_markers = []
         self.pen_markers_msg = MarkerArray()
 
