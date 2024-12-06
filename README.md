@@ -1,9 +1,5 @@
 # CS4048_SheepHerding
 
-
-[Google Doc](https://docs.google.com/document/d/1pJ0U8vCnQ_odnONFk349ONtStWuJV8kWYHxC4bvhFdw/edit?usp=sharing)
-
-
 ## Setup
 
 build package
@@ -21,6 +17,9 @@ run desired launch file
 ros2 launch sheep_simulation launch.py // runs simulation + rviz2 with preloaded config
 
 // development
+// run launch files on separate terminals
+// simulation terminal can be interrupted and re-launched after building, to run simulation again
+
 ros2 launch sheep_simulation launch_rviz.py // runs rviz2 with preloaded config
 ros2 launch sheep_simulation launch_sim.py // runs simulation only
 ```
