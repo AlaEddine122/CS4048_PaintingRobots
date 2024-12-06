@@ -2,14 +2,15 @@ import rclpy
 from rclpy.node import Node
 from sheep_simulation_interfaces.msg import EntityPose, EntityPoseArray
 from sheep_simulation_interfaces.srv import EntitySpawn, Grid
+from sheep_simulation.PsuedoSheepSeperationPort import PsuedoSheep
 import math
 import random
+import numpy as np
 
 
 class SheepSimulationNode(Node):
     def __init__(self):
         super().__init__('sheep_simulation_node')
-
         # Timer for sheep logic
         self.timer = self.create_timer(0.1, self.update_simulation)
 
@@ -35,6 +36,8 @@ class SheepSimulationNode(Node):
         self.wolf_positions = {}
 
         self.init_grid()
+
+        self.boids = PsuedoSheep(logger=self.get_logger())
 
         # # Pen location (defined in master_node.py)
         # self.pen_x_min = 25.0 - 10.0
@@ -111,7 +114,30 @@ class SheepSimulationNode(Node):
         positions = []
         for sheep in self.sheep:
             sheep["pose"] = self.update_sheep_position(sheep["pose"])
+
+            localsheep = np.array([
+                sheep["pose"]["x"],
+                sheep["pose"]["y"],
+                sheep["pose"]["theta"]
+            ])
+            globalsheep = np.array([
+                [sheep["pose"]["x"],
+                sheep["pose"]["y"],
+                sheep["pose"]["theta"]]
+                for sheep in self.sheep
+            ])
+            #sheep["pose"]["x"], sheep["pose"]["y"], sheep["pose"]["theta"] = self.boids.update_velocity(localsheep, globalsheep)
             #self.publish_sheep_position(sheep)
+            # self.get_logger().info(f"localsheep: {localsheep}")
+            # self.get_logger().info(f"globalsheep: {globalsheep}")
+            dx, dy, dtheta = self.boids.update_velocity(localsheep, globalsheep)
+
+            sheep["pose"]["x"] += dx
+            sheep["pose"]["y"] += dy
+            sheep["pose"]["theta"] += dtheta
+
+            sheep["pose"]["x"] = max(self.grid[0][0], min(sheep["pose"]["x"], self.grid[0][1]))
+            sheep["pose"]["y"] = max(self.grid[1][0], min(sheep["pose"]["y"], self.grid[1][1]))
 
             entity = EntityPose()
             entity.name = sheep["name"]
@@ -154,9 +180,6 @@ class SheepSimulationNode(Node):
                 sheep_pose = self.random_walk(sheep_pose)
         else:
             sheep_pose = self.random_walk(sheep_pose)
-
-        sheep_pose["x"] = max(self.grid[0][0], min(sheep_pose["x"], self.grid[0][1]))
-        sheep_pose["y"] = max(self.grid[1][0], min(sheep_pose["y"], self.grid[1][1]))
         
         return sheep_pose
 

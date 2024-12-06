@@ -44,7 +44,7 @@ class MasterSimulationNode(Node):
         # self.grid_publisher.publish(grid_msg)
 
         # create pens
-        self.pen_size = 5.0
+        self.pen_size = 15.0
         pen_markers = []
         self.pen_markers_msg = MarkerArray()
 
@@ -83,8 +83,10 @@ class MasterSimulationNode(Node):
             entity = EntityPose()
 
             entity.name = f"{group_name}_sheep{i+1}"
-            entity.x = random.uniform(center_x - 2.0, center_x + 2.0)
-            entity.y = random.uniform(center_y - 2.0, center_y + 2.0)
+            # entity.x = random.uniform(center_x - 2.0, center_x + 2.0)
+            # entity.y = random.uniform(center_y - 2.0, center_y + 2.0)
+            entity.x = random.uniform(self.grid[0][0], self.grid[0][1])
+            entity.y = random.uniform(self.grid[1][0], self.grid[1][1])
 
             spawn_array.append(entity)
             # self.spawn_sheep(name, x, y)
