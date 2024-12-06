@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from sheep_simulation_interfaces.msg import EntityPose
+from sheep_simulation_interfaces.msg import EntityPose, EntityPoseArray
 from sheep_simulation_interfaces.srv import EntitySpawn, Grid
 import math
 
@@ -10,7 +10,7 @@ class WolfSimulationNode(Node):
         super().__init__('wolf_simulation_node')
 
         # Timer for wolf logic
-        self.timer = self.create_timer(0.5, self.update_simulation)
+        self.timer = self.create_timer(0.1, self.update_simulation)
 
         # List of all wolves
         self.wolves = []
@@ -24,10 +24,10 @@ class WolfSimulationNode(Node):
             self.get_logger().info('Waiting for grid service...')
 
         # Publishers
-        self.wolf_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/wolf/pose', 10)
+        self.wolf_position_publisher = self.create_publisher(EntityPoseArray, 'sheep_simulation/wolf/pose', 10)
 
         # Subscribers
-        self.sheep_position_subscription = self.create_subscription(EntityPose, 'sheep_simulation/sheep/pose', self.sheep_position_callback, 10)
+        self.sheep_position_subscription = self.create_subscription(EntityPoseArray, 'sheep_simulation/sheep/pose', self.sheep_position_callback, 10)
         # self.wolf_position_subscription = self.create_subscription(Grid, 'sheep_simulation/grid', self.grid_initialisation_callback, 10)
 
         # Tracking sheep positions and groups
@@ -83,26 +83,29 @@ class WolfSimulationNode(Node):
 
     def wolf_spawn_callback(self, request, response):
         try:
-            wolf_obj = {
-                "name": request.name,
-                "pose": {
-                    "x": request.x,
-                    "y": request.y,
-                    "theta": request.theta
+            for wolf in request.spawn_entities:
+
+                wolf_obj = {
+                    "name": wolf.name,
+                    "pose": {
+                        "x": wolf.x,
+                        "y": wolf.y,
+                        "theta": wolf.theta
+                    }
                 }
-            }
-            self.wolves.append(wolf_obj)
-            response.result = "ok"
-            self.get_logger().info(f"Spawned wolf: {request.name} at ({request.x}, {request.y})")
+
+                self.wolves.append(wolf_obj)
+                response.result = "ok"
+                self.get_logger().info(f"Spawned sheep: {wolf.name} at ({wolf.x}, {wolf.y})")
         except Exception as e:
             response.result = "fail"
             self.get_logger().error(f"Failed to spawn wolf: {e}")
-
         return response
 
     def sheep_position_callback(self, msg):
         # Track sheep positions by their names
-        self.sheep_positions[msg.name] = (msg.x, msg.y)
+        for sheep in msg.entity_positions:
+            self.sheep_positions[sheep.name] = (sheep.x, sheep.y)
 
     def assign_sheep_groups(self):
         """Assign sheep to groups based on proximity to wolves."""
@@ -124,9 +127,8 @@ class WolfSimulationNode(Node):
             return
 
         self.assign_sheep_groups()  # Update sheep group assignments
-
-        self.get_logger().info(f"sheep safe: {self.sheep_safe()}")
         
+        positions = []
         for wolf_index, wolf in enumerate(self.wolves):
             # Update the wolf's position
             if self.sheep_safe():
@@ -134,8 +136,17 @@ class WolfSimulationNode(Node):
             else:
                 wolf["pose"] = self.herd_sheep(wolf["pose"], wolf_index)
 
+            entity = EntityPose()
+            entity.name = wolf["name"]
+            entity.x = wolf["pose"]["x"]
+            entity.y = wolf["pose"]["y"]
+            entity.theta = wolf["pose"]["theta"]
+            positions.append(entity)
+
             # Publish the updated position
-            self.publish_wolf_position(wolf)
+            # self.publish_wolf_position(wolf)
+
+        self.publish_wolf_positions(positions)
     
     def sheep_safe(self):
         return all([(pose[0] >= self.pen_x_min) and (pose[1] >= self.pen_y_min) for pose in self.sheep_positions.values()])
@@ -191,13 +202,10 @@ class WolfSimulationNode(Node):
 
         return wolf_pose
 
-    def publish_wolf_position(self, wolf):
-        position_msg = EntityPose()
-        position_msg.name = wolf["name"]
-        position_msg.x = wolf["pose"]["x"]
-        position_msg.y = wolf["pose"]["y"]
-        position_msg.theta = wolf["pose"]["theta"]
-        self.wolf_position_publisher.publish(position_msg)
+    def publish_wolf_positions(self, positions):
+        msg = EntityPoseArray()
+        msg.entity_positions = positions
+        self.wolf_position_publisher.publish(msg)
 
 
 def main(args=None):

@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from sheep_simulation_interfaces.msg import EntityPose
+from sheep_simulation_interfaces.msg import EntityPose, EntityPoseArray
 from sheep_simulation_interfaces.srv import EntitySpawn, Grid
 import math
 import random
@@ -11,7 +11,7 @@ class SheepSimulationNode(Node):
         super().__init__('sheep_simulation_node')
 
         # Timer for sheep logic
-        self.timer = self.create_timer(0.5, self.update_simulation)
+        self.timer = self.create_timer(0.1, self.update_simulation)
 
         # List of all sheep
         self.sheep = []
@@ -25,11 +25,11 @@ class SheepSimulationNode(Node):
             self.get_logger().info('Waiting for grid service...')
 
         # Publishers
-        self.sheep_position_publisher = self.create_publisher(EntityPose, 'sheep_simulation/sheep/pose', 10)
+        self.sheep_position_publisher = self.create_publisher(EntityPoseArray, 'sheep_simulation/sheep/pose', 10)
 
         # Subscribers
         # self.grid_subscription = self.create_subscription(Grid, 'sheep_simulation/gtid', self.grid_initialisation_callback, 10)
-        self.wolf_position_subscription = self.create_subscription( EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10)
+        self.wolf_position_subscription = self.create_subscription(EntityPoseArray, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10)
 
         # Tracking wolf positions
         self.wolf_positions = {}
@@ -68,24 +68,28 @@ class SheepSimulationNode(Node):
 
     def sheep_spawn_callback(self, request, response):
         try:
-            sheep_obj = {
-                "name": request.name,
-                "pose": {
-                    "x": request.x,
-                    "y": request.y,
-                    "theta": request.theta
+            for sheep in request.spawn_entities:
+
+                sheep_obj = {
+                    "name": sheep.name,
+                    "pose": {
+                        "x": sheep.x,
+                        "y": sheep.y,
+                        "theta": sheep.theta
+                    }
                 }
-            }
-            self.sheep.append(sheep_obj)
-            response.result = "ok"
-            self.get_logger().info(f"Spawned sheep: {request.name} at ({request.x}, {request.y})")
+
+                self.sheep.append(sheep_obj)
+                response.result = "ok"
+                self.get_logger().info(f"Spawned sheep: {sheep.name} at ({sheep.x}, {sheep.y})")
         except Exception as e:
             response.result = "fail"
             self.get_logger().error(f"Failed to spawn sheep: {e}")
         return response
 
     def wolf_position_callback(self, msg):
-        self.wolf_positions[msg.name] = (msg.x, msg.y)
+        for wolf in msg.entity_positions:
+            self.wolf_positions[wolf.name] = (wolf.x, wolf.y)
 
     def grid_initialisation_callback(self, msg):
         self.grid = [
@@ -104,9 +108,20 @@ class SheepSimulationNode(Node):
         if not hasattr(self, "grid"):
             return
         
+        positions = []
         for sheep in self.sheep:
             sheep["pose"] = self.update_sheep_position(sheep["pose"])
-            self.publish_sheep_position(sheep)
+            #self.publish_sheep_position(sheep)
+
+            entity = EntityPose()
+            entity.name = sheep["name"]
+            entity.x = sheep["pose"]["x"]
+            entity.y = sheep["pose"]["y"]
+            entity.theta = sheep["pose"]["theta"]
+            positions.append(entity)
+        
+        self.publish_sheep_positions(positions)
+
 
     def update_sheep_position(self, sheep_pose):
         
@@ -152,13 +167,10 @@ class SheepSimulationNode(Node):
             "theta": pose["theta"]
         }
 
-    def publish_sheep_position(self, sheep):
-        position_msg = EntityPose()
-        position_msg.name = sheep["name"]
-        position_msg.x = sheep["pose"]["x"]
-        position_msg.y = sheep["pose"]["y"]
-        position_msg.theta = sheep["pose"]["theta"]
-        self.sheep_position_publisher.publish(position_msg)
+    def publish_sheep_positions(self, positions):
+        msg = EntityPoseArray()
+        msg.entity_positions = positions
+        self.sheep_position_publisher.publish(msg)
 
 
 def main(args=None):

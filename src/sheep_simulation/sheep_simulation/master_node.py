@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from visualization_msgs.msg import Marker
-from sheep_simulation_interfaces.msg import EntityPose
+from visualization_msgs.msg import Marker, MarkerArray
+from sheep_simulation_interfaces.msg import EntityPose, EntityPoseArray
 from sheep_simulation_interfaces.srv import EntitySpawn, Grid
 import random
 import math
@@ -13,9 +13,9 @@ class MasterSimulationNode(Node):
 
         # simulation markers
         self.sheep_markers = {}
-        self.sheep_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/sheep_marker', 10)
+        self.sheep_marker_publisher = self.create_publisher(MarkerArray, 'sheep_simulation/simulation/sheep_markers', 10)
         self.wolf_markers = {}
-        self.wolf_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/wolf_marker', 10)
+        self.wolf_marker_publisher = self.create_publisher(MarkerArray, 'sheep_simulation/simulation/wolf_markers', 10)
 
         self.pen_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/pen', 10)
 
@@ -34,11 +34,11 @@ class MasterSimulationNode(Node):
         self.wolf_spawn_request = EntitySpawn.Request()
 
         # subcribe to entity position topics
-        self.sheep_position_subscription = self.create_subscription(EntityPose, 'sheep_simulation/sheep/pose', self.sheep_position_callback, 10)
-        self.wolf_position_subscription = self.create_subscription(EntityPose, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10)
+        self.sheep_position_subscription = self.create_subscription(EntityPoseArray, 'sheep_simulation/sheep/pose', self.sheep_position_callback, 10)
+        self.wolf_position_subscription = self.create_subscription(EntityPoseArray, 'sheep_simulation/wolf/pose', self.wolf_position_callback, 10)
 
         # create grid
-        grid_size = 20.0
+        grid_size = 50.0
         self.grid = self.create_grid(size=grid_size)
         # self.grid_publisher = self.create_publisher(Grid, "sheep_simulation/grid", 10)
         # self.grid_publisher.publish(grid_msg)
@@ -54,8 +54,13 @@ class MasterSimulationNode(Node):
         self.spawn_sheep_group("group2", center_x=(grid_size/3), center_y=-(grid_size/3))
 
         # spawn 2 wolves in respective pens
-        self.spawn_wolf("wolf1", x=self.grid[0][0]+self.pen_size/4, y=self.grid[1][1]-self.pen_size/4)
-        self.spawn_wolf("wolf2", x=self.grid[0][0]+self.pen_size/4, y=self.grid[1][0]+self.pen_size/4)
+        wolf_spawns = [
+            ["wolf1", self.grid[0][0]+self.pen_size/4, self.grid[1][1]-self.pen_size/4],
+            ["wolf2", self.grid[0][0]+self.pen_size/4, self.grid[1][0]+self.pen_size/4]
+        ]
+        self.spawn_wolf_group(wolf_spawns)
+        # self.spawn_wolf("wolf1", x=self.grid[0][0]+self.pen_size/4, y=self.grid[1][1]-self.pen_size/4)
+        # self.spawn_wolf("wolf2", x=self.grid[0][0]+self.pen_size/4, y=self.grid[1][0]+self.pen_size/4)
 
     def create_grid(self, size):
         grid = [
@@ -66,11 +71,59 @@ class MasterSimulationNode(Node):
         return grid
 
     def spawn_sheep_group(self, group_name, center_x, center_y):
-        for i in range(3):
-            x = random.uniform(center_x - 2.0, center_x + 2.0)
-            y = random.uniform(center_y - 2.0, center_y + 2.0)
-            name = f"{group_name}_sheep{i+1}"
-            self.spawn_sheep(name, x, y)
+        spawn_array = []
+        for i in range(50):
+            entity = EntityPose()
+
+            entity.name = f"{group_name}_sheep{i+1}"
+            entity.x = random.uniform(center_x - 2.0, center_x + 2.0)
+            entity.y = random.uniform(center_y - 2.0, center_y + 2.0)
+
+            spawn_array.append(entity)
+            # self.spawn_sheep(name, x, y)
+            
+            # Create markers for visualization
+            marker = self.create_marker("sheep", entity.name)
+            marker.pose.position.x = entity.x
+            marker.pose.position.y = entity.y
+            marker.pose.position.z = 0.0
+            marker.pose.orientation.z = math.sin(entity.theta / 2)
+            marker.pose.orientation.w = math.cos(entity.theta / 2)
+
+            self.sheep_markers[entity.name] = marker
+        
+        self.sheep_spawn_request.spawn_entities = spawn_array
+
+        future = self.sheep_spawn_client.call_async(self.sheep_spawn_request)
+
+        rclpy.spin_until_future_complete(self, future)
+
+    def spawn_wolf_group(self, wolves):
+        spawn_array = []
+        for wolf in wolves:
+            entity = EntityPose()
+
+            entity.name = f"{wolf[0]}"
+            entity.x = wolf[1]
+            entity.y = wolf[2]
+
+            spawn_array.append(entity)
+            
+            # Create markers for visualization
+            marker = self.create_marker("wolf", entity.name)
+            marker.pose.position.x = entity.x
+            marker.pose.position.y = entity.y
+            marker.pose.position.z = 0.0
+            marker.pose.orientation.z = math.sin(entity.theta / 2)
+            marker.pose.orientation.w = math.cos(entity.theta / 2)
+
+            self.wolf_markers[entity.name] = marker
+        
+        self.wolf_spawn_request.spawn_entities = spawn_array
+
+        future = self.wolf_spawn_client.call_async(self.wolf_spawn_request)
+
+        rclpy.spin_until_future_complete(self, future)
 
     def spawn_sheep(self, name, x, y):
     # Generate random spawn positions within the grid boundaries
@@ -93,7 +146,7 @@ class MasterSimulationNode(Node):
         marker.pose.orientation.w = math.cos(theta / 2)
 
         self.sheep_markers[name] = marker
-        self.sheep_marker_publisher.publish(marker)
+        # self.sheep_marker_publisher.publish(marker)
 
 
     def spawn_wolf(self, name, x, y):
@@ -110,22 +163,36 @@ class MasterSimulationNode(Node):
         marker.pose.position.x = x
         marker.pose.position.y = y
         self.wolf_markers[name] = marker
-        self.wolf_marker_publisher.publish(marker)
+        #self.wolf_marker_publisher.publish(marker)
 
     def in_pen(self, x, y):
         return (x >= self.grid[0][1] - self.pen_size) and (y >= self.grid[1][1] - self.pen_size)
 
     def sheep_position_callback(self, response):
-        if self.sheep_markers[response.name]:
-            self.sheep_markers[response.name].pose.position.x = response.x
-            self.sheep_markers[response.name].pose.position.y = response.y
-            self.sheep_marker_publisher.publish(self.sheep_markers[response.name])
+        msg = MarkerArray()
+        markers = []
+        for sheep in response.entity_positions:
+            if self.sheep_markers[sheep.name]:
+                self.sheep_markers[sheep.name].pose.position.x = sheep.x
+                self.sheep_markers[sheep.name].pose.position.y = sheep.y
+                # self.sheep_marker_publisher.publish(self.sheep_markers[sheep.name])
+                markers.append(self.sheep_markers[sheep.name])
+
+        msg.markers = markers
+        self.sheep_marker_publisher.publish(msg)
 
     def wolf_position_callback(self, response):
-        if self.wolf_markers[response.name]:
-            self.wolf_markers[response.name].pose.position.x = response.x
-            self.wolf_markers[response.name].pose.position.y = response.y
-            self.wolf_marker_publisher.publish(self.wolf_markers[response.name])
+        msg = MarkerArray()
+        markers = []
+        for wolf in response.entity_positions:
+            if self.wolf_markers[wolf.name]:
+                self.wolf_markers[wolf.name].pose.position.x = wolf.x
+                self.wolf_markers[wolf.name].pose.position.y = wolf.y
+                # self.sheep_marker_publisher.publish(self.sheep_markers[sheep.name])
+                markers.append(self.wolf_markers[wolf.name])
+
+        msg.markers = markers
+        self.wolf_marker_publisher.publish(msg)
 
     def grid_init_callback(self, request, response):
         response.xmin = self.grid[0][0]
