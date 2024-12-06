@@ -40,8 +40,6 @@ class MasterSimulationNode(Node):
         # create grid
         grid_size = 50.0
         self.grid = self.create_grid(size=grid_size)
-        # self.grid_publisher = self.create_publisher(Grid, "sheep_simulation/grid", 10)
-        # self.grid_publisher.publish(grid_msg)
 
         # create pens
         self.pen_size = 10.0

@@ -36,16 +36,6 @@ class WolfSimulationNode(Node):
 
         self.init_grid()
 
-        # # Pen location for sheep and wolf (from master_node.py)
-        # self.pen_x_min = 25.0 - 10.0
-        # self.pen_y_min = 25.0 - 10.0
-        # self.pen_center_x = self.pen_x_min + 5.0
-        # self.pen_center_y = self.pen_y_min + 5.0
-
-        # self.wolf_pen_x_min = -25.0
-        # self.wolf_pen_y_min = 25.0 - 5.0
-        # self.wolf_pen_center_x = self.wolf_pen_x_min + 5.0
-        # self.wolf_pen_center_y = self.wolf_pen_y_min + 2.5
 
     def init_grid(self):
         # Create request
@@ -74,11 +64,6 @@ class WolfSimulationNode(Node):
             "wolf1": (self.grid[0][0] + self.pen_size/4, self.grid[0][1] - self.pen_size/4),
             "wolf2": (self.grid[0][0] + self.pen_size/4, self.grid[1][0] + self.pen_size/4),
         }
-        
-        # self.wolf_pen_x_min = self.grid[0][0]
-        # self.wolf_pen_y_min = self.grid[1][1] - pen_size/2
-        # self.wolf_pen_center_x = self.wolf_pen_x_min + pen_size/4
-        # self.wolf_pen_center_y = self.wolf_pen_y_min + pen_size/4
 
 
     def wolf_spawn_callback(self, request, response):
@@ -143,8 +128,6 @@ class WolfSimulationNode(Node):
             entity.theta = wolf["pose"]["theta"]
             positions.append(entity)
 
-            # Publish the updated position
-            # self.publish_wolf_position(wolf)
 
         self.publish_wolf_positions(positions)
     

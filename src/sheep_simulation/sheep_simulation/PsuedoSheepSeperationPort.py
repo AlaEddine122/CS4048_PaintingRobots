@@ -143,9 +143,10 @@ class PsuedoSheep():
         ##vector_array=np.array([self.calc_cohesion(),self.calc_seperation(),self.calc_alignment()])
         #vector_array=np.array([self.calc_cohesion(),self.calc_seperation(), self.calc_line_border()])
 
-
+        # cohesion + separation
         vector_array=np.array([self.calc_cohesion(localSheep,globalSheep),self.calc_seperation(localSheep,globalSheep)])
         #vector_array=np.array([self.calc_seperation(localSheep,globalSheep)])
+        #vector_array=np.array([self.calc_cohesion(localSheep,globalSheep)])
 
         vector_array = vector_array[~np.all(vector_array == [0, 0], axis=1)]
 

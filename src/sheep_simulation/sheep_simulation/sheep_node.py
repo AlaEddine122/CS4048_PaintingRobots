@@ -129,10 +129,6 @@ class SheepSimulationNode(Node):
                     sheep["pose"]["theta"]]
                     for sheep in self.sheep
                 ])
-                #sheep["pose"]["x"], sheep["pose"]["y"], sheep["pose"]["theta"] = self.boids.update_velocity(localsheep, globalsheep)
-                #self.publish_sheep_position(sheep)
-                # self.get_logger().info(f"localsheep: {localsheep}")
-                # self.get_logger().info(f"globalsheep: {globalsheep}")
                 dx, dy, dtheta = self.boids.update_velocity(localsheep, globalsheep)
 
                 sheep["pose"]["x"] += dx
