@@ -17,7 +17,7 @@ class MasterSimulationNode(Node):
         self.wolf_markers = {}
         self.wolf_marker_publisher = self.create_publisher(MarkerArray, 'sheep_simulation/simulation/wolf_markers', 10)
 
-        self.pen_marker_publisher = self.create_publisher(Marker, 'sheep_simulation/simulation/pen', 10)
+        self.pen_marker_publisher = self.create_publisher(MarkerArray, 'sheep_simulation/simulation/pen_markers', 10)
 
         # Services
         self.grid_init_service = self.create_service(Grid, "sheep_simulation/grid", self.grid_init_callback)
@@ -45,9 +45,16 @@ class MasterSimulationNode(Node):
 
         # create pens
         self.pen_size = 5.0
-        self.pen_marker_publisher.publish(self.create_pen_marker("sheep_pen", size=self.pen_size))
-        self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen1", size=self.pen_size / 2))
-        self.pen_marker_publisher.publish(self.create_pen_marker("wolf_pen2", size=self.pen_size / 2))
+        pen_markers = []
+        self.pen_markers_msg = MarkerArray()
+
+        pen_markers.append(self.create_pen_marker("sheep_pen", size=self.pen_size))
+        pen_markers.append(self.create_pen_marker("wolf_pen1", size=self.pen_size / 2))
+        pen_markers.append(self.create_pen_marker("wolf_pen2", size=self.pen_size / 2))
+
+        self.pen_markers_msg.markers = pen_markers
+        self.create_timer(0.5, self.update_markers)
+        #self.pen_marker_publisher.publish(pen_markers_msg)
 
         # spawn 6 sheep in 2 groups of 3
         self.spawn_sheep_group("group1", center_x=-(grid_size/3), center_y=(grid_size/3))
@@ -125,45 +132,6 @@ class MasterSimulationNode(Node):
 
         rclpy.spin_until_future_complete(self, future)
 
-    def spawn_sheep(self, name, x, y):
-    # Generate random spawn positions within the grid boundaries
-        theta = random.uniform(0, 2 * math.pi)  # Random orientation
-
-        # Create spawn request
-        self.sheep_spawn_request.name = name
-        self.sheep_spawn_request.x = x
-        self.sheep_spawn_request.y = y
-        self.sheep_spawn_request.theta = theta
-
-        future = self.sheep_spawn_client.call_async(self.sheep_spawn_request)
-
-        # Create marker for visualization
-        marker = self.create_marker("sheep", name)
-        marker.pose.position.x = x
-        marker.pose.position.y = y
-        marker.pose.position.z = 0.0
-        marker.pose.orientation.z = math.sin(theta / 2)
-        marker.pose.orientation.w = math.cos(theta / 2)
-
-        self.sheep_markers[name] = marker
-        # self.sheep_marker_publisher.publish(marker)
-
-
-    def spawn_wolf(self, name, x, y):
-        # create request
-        self.wolf_spawn_request.name = name
-        self.wolf_spawn_request.x = x
-        self.wolf_spawn_request.y = y
-        self.wolf_spawn_request.theta = 0.0
-
-        future = self.wolf_spawn_client.call_async(self.wolf_spawn_request)
-
-        # Create marker
-        marker = self.create_marker("wolf", name)
-        marker.pose.position.x = x
-        marker.pose.position.y = y
-        self.wolf_markers[name] = marker
-        #self.wolf_marker_publisher.publish(marker)
 
     def in_pen(self, x, y):
         return (x >= self.grid[0][1] - self.pen_size) and (y >= self.grid[1][1] - self.pen_size)
@@ -266,6 +234,8 @@ class MasterSimulationNode(Node):
 
         return marker
 
+    def update_markers(self):
+        self.pen_marker_publisher.publish(self.pen_markers_msg)
 
 def main(args=None):
     rclpy.init(args=args)
